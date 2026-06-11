@@ -91,62 +91,74 @@ export class NetworkManager {
             if (!this.queueChannel)
                 return;
             this.role = 'local';
-            // 1. Enter the public queue
-            yield this.queueChannel.presence.enter({
-                status: 'waiting',
-                roomId: this.myClientId,
-                timestamp: Date.now()
-            });
-            // 2. Scan active players in queue
-            const members = yield this.queueChannel.presence.get();
-            // Look for other waiting players
-            const waitingPlayers = members.filter((m) => { var _a; return m.clientId !== this.myClientId && ((_a = m.data) === null || _a === void 0 ? void 0 : _a.status) === 'waiting'; });
-            if (waitingPlayers.length > 0) {
-                // Sort to match oldest waiting challenger (First-In, First-Out)
-                waitingPlayers.sort((a, b) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
-                const targetHost = waitingPlayers[0];
-                const hostRoomId = targetHost.clientId;
-                this.activeRoomCode = hostRoomId;
-                this.role = 'guest';
-                // Join host's private channel
-                this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
-                this.subscribeToGameChannel();
-                // Notify host that we are joining
-                yield this.gameChannel.publish('handshake', { guestId: this.myClientId });
-                // Update public status
-                yield this.queueChannel.presence.update({
-                    status: 'matched',
-                    roomId: hostRoomId,
+            try {
+                // 1. Explicitly attach to the queue channel first
+                yield this.queueChannel.attach();
+                // 2. Enter the public queue
+                yield this.queueChannel.presence.enter({
+                    status: 'waiting',
+                    roomId: this.myClientId,
                     timestamp: Date.now()
                 });
-                // Leave the queue
-                this.queueChannel.presence.leave();
-                onMatchStart('guest');
-            }
-            else {
-                // No one waiting, host a new room
-                this.role = 'host';
-                this.activeRoomCode = this.myClientId;
-                this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
-                this.subscribeToGameChannel();
-                // Listen for challenge handshake
-                this.gameChannel.subscribe('handshake', (msg) => __awaiter(this, void 0, void 0, function* () {
-                    console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
-                    // Remove from public queue
-                    this.queueChannel.presence.leave();
-                    this.gameChannel.unsubscribe('handshake');
-                    // Host generates initial sync state (terrain seed and initial wind)
-                    const initialWind = (Math.random() - 0.5) * 2.0;
-                    const terrainSeed = Date.now();
-                    yield this.gameChannel.publish('game_event', {
-                        type: 'game_start',
-                        data: { windX: initialWind, seed: terrainSeed }
+                // 3. Scan active players in queue (guard against undefined results)
+                const members = (yield this.queueChannel.presence.get()) || [];
+                // Look for other waiting players
+                const waitingPlayers = members.filter((m) => { var _a; return m.clientId !== this.myClientId && ((_a = m.data) === null || _a === void 0 ? void 0 : _a.status) === 'waiting'; });
+                if (waitingPlayers.length > 0) {
+                    // Sort to match oldest waiting challenger (First-In, First-Out)
+                    waitingPlayers.sort((a, b) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
+                    const targetHost = waitingPlayers[0];
+                    const hostRoomId = targetHost.clientId;
+                    this.activeRoomCode = hostRoomId;
+                    this.role = 'guest';
+                    // Join host's private channel
+                    this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
+                    yield this.gameChannel.attach();
+                    this.subscribeToGameChannel();
+                    // Notify host that we are joining
+                    yield this.gameChannel.publish('handshake', { guestId: this.myClientId });
+                    // Update public status
+                    yield this.queueChannel.presence.update({
+                        status: 'matched',
+                        roomId: hostRoomId,
+                        timestamp: Date.now()
                     });
-                    if (this.onGameStartCallback) {
-                        this.onGameStartCallback(initialWind, terrainSeed);
-                    }
-                    onMatchStart('host');
-                }));
+                    // Leave the queue
+                    this.queueChannel.presence.leave();
+                    onMatchStart('guest');
+                }
+                else {
+                    // No one waiting, host a new room
+                    this.role = 'host';
+                    this.activeRoomCode = this.myClientId;
+                    this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
+                    yield this.gameChannel.attach();
+                    this.subscribeToGameChannel();
+                    // Listen for challenge handshake
+                    this.gameChannel.subscribe('handshake', (msg) => __awaiter(this, void 0, void 0, function* () {
+                        console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
+                        // Remove from public queue
+                        this.queueChannel.presence.leave();
+                        this.gameChannel.unsubscribe('handshake');
+                        // Host generates initial sync state (terrain seed and initial wind)
+                        const initialWind = (Math.random() - 0.5) * 2.0;
+                        const terrainSeed = Date.now();
+                        yield this.gameChannel.publish('game_event', {
+                            type: 'game_start',
+                            data: { windX: initialWind, seed: terrainSeed }
+                        });
+                        if (this.onGameStartCallback) {
+                            this.onGameStartCallback(initialWind, terrainSeed);
+                        }
+                        onMatchStart('host');
+                    }));
+                }
+            }
+            catch (err) {
+                console.error("Matchmaking error:", err);
+                if (this.onDisconnectCallback) {
+                    this.onDisconnectCallback("Connection error during matchmaking.");
+                }
             }
         });
     }
@@ -160,6 +172,7 @@ export class NetworkManager {
             this.activeRoomCode = code;
             this.role = 'host';
             this.gameChannel = this.client.channels.get(`tankwars-room-${code}`);
+            yield this.gameChannel.attach();
             this.subscribeToGameChannel();
             // Listen for guest handshake
             this.gameChannel.subscribe('handshake', (msg) => __awaiter(this, void 0, void 0, function* () {
@@ -188,6 +201,7 @@ export class NetworkManager {
             this.activeRoomCode = code.toUpperCase();
             this.role = 'guest';
             this.gameChannel = this.client.channels.get(`tankwars-room-${this.activeRoomCode}`);
+            yield this.gameChannel.attach();
             this.subscribeToGameChannel();
             // Send handshake
             yield this.gameChannel.publish('handshake', { guestId: this.myClientId });
