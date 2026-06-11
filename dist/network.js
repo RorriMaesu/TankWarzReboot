@@ -48,6 +48,8 @@ export class NetworkManager {
                         const appInfo = yield res.json();
                         key = appInfo.keys[0].keyStr;
                         console.log("Provisioned sandbox key:", key);
+                        // Give Ably sandbox database a moment to propagate the temporary key
+                        yield new Promise(resolve => setTimeout(resolve, 1000));
                     }
                     catch (e) {
                         console.error("Failed to provision sandbox key:", e);
