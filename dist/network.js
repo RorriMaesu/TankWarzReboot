@@ -49,7 +49,7 @@ export class NetworkManager {
                         key = appInfo.keys[0].keyStr;
                         console.log("Provisioned sandbox key:", key);
                         // Give Ably sandbox database a moment to propagate the temporary key
-                        yield new Promise(resolve => setTimeout(resolve, 1000));
+                        yield new Promise(resolve => setTimeout(resolve, 2000));
                     }
                     catch (e) {
                         console.error("Failed to provision sandbox key:", e);
@@ -60,8 +60,7 @@ export class NetworkManager {
                 this.client = new Ably.Realtime({
                     key: key,
                     clientId: this.myClientId,
-                    routingPolicy: isSandbox ? 'sandbox' : undefined,
-                    nonprod: isSandbox ? true : undefined
+                    environment: isSandbox ? 'sandbox' : undefined
                 });
                 this.client.connection.on('connected', () => {
                     console.log("Connected to Ably cloud realtime network.");
