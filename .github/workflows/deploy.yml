@@ -24,11 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install TypeScript Compiler
-        run: npm install -g typescript
+      - name: Install Dependencies
+        run: npm install
 
       - name: Compile TypeScript
-        run: tsc
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

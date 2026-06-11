@@ -1,0 +1,13 @@
+{
+  "name": "tankwarzreboot",
+  "version": "1.0.0",
+  "description": "Tank Wars - Destructible Battleground Online Multiplayer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
