@@ -931,6 +931,7 @@ export class GameEngine {
                             if (this.turnsElapsed % 6 === 0) {
                                 const x = 200 + Math.random() * (this.config.canvasWidth - 400);
                                 this.spawnMine(x);
+                                this.network.sendEvent('mine_spawn', { x });
                             }
                             // Shift turns and randomize wind
                             this.randomizeWind();
@@ -1378,6 +1379,9 @@ export class GameEngine {
         });
         this.network.onCrateDrop((x, crateType) => {
             this.spawnSupplyCrateSpecific(x, crateType);
+        });
+        this.network.onMineSpawn((x) => {
+            this.spawnMine(x);
         });
         this.network.onTurnEnd(() => {
             this.turnsElapsed++;

@@ -22,6 +22,7 @@ export class NetworkManager {
         this.onTurnEndCallback = null;
         this.onGameStartCallback = null;
         this.onDisconnectCallback = null;
+        this.onMineSpawnCallback = null;
         this.myClientId = 'client-' + Math.random().toString(36).substring(2, 11);
     }
     init(apiKey) {
@@ -83,6 +84,7 @@ export class NetworkManager {
     onTurnEnd(cb) { this.onTurnEndCallback = cb; }
     onGameStart(cb) { this.onGameStartCallback = cb; }
     onDisconnect(cb) { this.onDisconnectCallback = cb; }
+    onMineSpawn(cb) { this.onMineSpawnCallback = cb; }
     /**
      * Enters the public matchmaking queue and waits for an opponent.
      */
@@ -252,6 +254,10 @@ export class NetworkManager {
                     if (this.onCrateDropCallback) {
                         this.onCrateDropCallback(payload.data.x, payload.data.crateType);
                     }
+                    break;
+                case 'mine_spawn':
+                    if (this.onMineSpawnCallback)
+                        this.onMineSpawnCallback(payload.data.x);
                     break;
                 case 'turn_end':
                     if (this.onTurnEndCallback)

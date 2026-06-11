@@ -3,7 +3,7 @@ declare const Ably: any;
 import { Vector2D, WeaponType } from './types.js';
 
 export interface GameEventPayload {
-  type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start';
+  type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn';
   data: any;
 }
 
@@ -23,6 +23,7 @@ export class NetworkManager {
   private onTurnEndCallback: (() => void) | null = null;
   private onGameStartCallback: ((windX: number, seed: number) => void) | null = null;
   private onDisconnectCallback: ((reason: string) => void) | null = null;
+  private onMineSpawnCallback: ((x: number) => void) | null = null;
 
   constructor() {
     this.myClientId = 'client-' + Math.random().toString(36).substring(2, 11);
@@ -91,6 +92,7 @@ export class NetworkManager {
   public onTurnEnd(cb: () => void) { this.onTurnEndCallback = cb; }
   public onGameStart(cb: (windX: number, seed: number) => void) { this.onGameStartCallback = cb; }
   public onDisconnect(cb: (reason: string) => void) { this.onDisconnectCallback = cb; }
+  public onMineSpawn(cb: (x: number) => void) { this.onMineSpawnCallback = cb; }
 
   /**
    * Enters the public matchmaking queue and waits for an opponent.
@@ -280,6 +282,9 @@ export class NetworkManager {
           if (this.onCrateDropCallback) {
             this.onCrateDropCallback(payload.data.x, payload.data.crateType);
           }
+          break;
+        case 'mine_spawn':
+          if (this.onMineSpawnCallback) this.onMineSpawnCallback(payload.data.x);
           break;
         case 'turn_end':
           if (this.onTurnEndCallback) this.onTurnEndCallback();
