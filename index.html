@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Wars - Destructible Battleground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui-layer">
+            <!-- TOP HUD: [P1] [TURN PILL] [P2] [WIND] all in one row -->
+            <div id="hud">
+                <div id="player-stats" class="hud-panel active">
+                    <span class="label player-label">PLAYER 1</span>
+                    <div class="stats-row">
+                        <span class="stat-item">HP <span id="player-hp" class="value">100</span></span>
+                        <span class="stat-item">FUEL <span id="player-fuel" class="value">100</span></span>
+                    </div>
+                    <div class="stat-bars">
+                        <div class="bar-track"><div id="player-hp-bar" class="bar-fill hp-bar" style="width:100%"></div></div>
+                        <div class="bar-track"><div id="player-fuel-bar" class="bar-fill fuel-bar" style="width:100%"></div></div>
+                    </div>
+                </div>
+
+                <div id="turn-indicator">PLAYER 1 TURN</div>
+
+                <div id="ai-stats" class="hud-panel">
+                    <span id="ai-stats-label" class="label ai-label">HEURISTIC AI</span>
+                    <div class="stats-row">
+                        <span class="stat-item">HP <span id="ai-hp" class="value">100</span></span>
+                        <span class="stat-item">FUEL <span id="ai-fuel" class="value">100</span></span>
+                    </div>
+                    <div class="stat-bars">
+                        <div class="bar-track"><div id="ai-hp-bar" class="bar-fill hp-bar" style="width:100%"></div></div>
+                        <div class="bar-track"><div id="ai-fuel-bar" class="bar-fill fuel-bar" style="width:100%"></div></div>
+                    </div>
+                </div>
+
+                <div id="wind-indicator" class="hud-panel">
+                    <span class="label">WIND SYSTEM</span>
+                    <div class="wind-row">
+                        <span id="wind-direction-arrow">&#8594;</span>
+                        <span id="wind-value" class="value">0 km/h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="center-message" class="hidden">EXPLOSION!</div>
+
+            <div id="bottom-panel">
+                <div id="message-log">
+                    <div class="log-entry">[SYSTEM] Battle initiated. Adjust sliders and deploy fire!</div>
+                </div>
+                
+                <div id="controls" class="hidden">
+                    <div class="controls-left">
+                        <!-- ROW 1: Combat controls (changes every turn) -->
+                        <div class="control-row">
+                            <div class="control-group control-group--wide">
+                                <label class="label">&#9876; WEAPONRY</label>
+                                <select id="weapon-selector">
+                                    <option value="small_cannon">Small Cannon (FREE)</option>
+                                    <option value="heavy_mortar">Heavy Mortar (25 Fuel)</option>
+                                    <option value="rapid_fire">Rapid Fire [3 Burst] (15 Fuel)</option>
+                                    <option value="dirt_spreader">Dirt Spreader [Terraform] (20 Fuel)</option>
+                                    <option value="cluster_bomb">Cluster Bomb [Air-Burst] (20 Fuel)</option>
+                                    <option value="bouncing_grenade">Bouncing Grenade [3 Bounces] (15 Fuel)</option>
+                                    <option id="opt-nuke" value="nuke" disabled>Tactical Nuke (LOCKED)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <div class="slider-header">
+                                    <label class="label">POWER</label>
+                                    <span id="power-val" class="slider-value">70</span>
+                                </div>
+                                <div class="slider-wrap">
+                                    <span class="slider-hint">10</span>
+                                    <input type="range" id="power-slider" min="10" max="150" value="70">
+                                    <span class="slider-hint">150</span>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <div class="slider-header">
+                                    <label class="label">ANGLE</label>
+                                    <span id="angle-val" class="slider-value">45&deg;</span>
+                                </div>
+                                <div class="slider-wrap">
+                                    <span class="slider-hint">0&deg;</span>
+                                    <input type="range" id="angle-slider" min="0" max="180" value="45">
+                                    <span class="slider-hint">180&deg;</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROW 2: Session settings (set once per game, visually de-emphasized) -->
+                        <div class="control-row control-row--settings">
+                            <div class="control-group">
+                                <label class="label">GAME MODE</label>
+                                <select id="mode-selector">
+                                    <option value="vs_ai" selected>Player vs AI</option>
+                                    <option value="pvp">Local PvP (Hotseat)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group" id="difficulty-group">
+                                <label class="label">AI LEVEL</label>
+                                <select id="difficulty-selector">
+                                    <option value="easy">Easy (High Error)</option>
+                                    <option value="medium" selected>Medium (Standard)</option>
+                                    <option value="expert">Expert (Calculates Wind)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="fire-button">FIRE</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <div class="game-over-content">
+                <h1 id="winner-text">VICTORY</h1>
+                <p>The battleground has been cleared.</p>
+                <button id="restart-button">REDEPLOY TANK</button>
+            </div>
+        </div>
+
+        <!-- MOBILE TOUCH CONTROLS -->
+        <div id="mobile-dpad" class="hidden">
+            <button id="mobile-left-btn" class="dpad-btn">◀</button>
+            <button id="mobile-right-btn" class="dpad-btn">▶</button>
+        </div>
+
+        <!-- LOBBY OVERLAY -->
+        <div id="lobby-overlay">
+            <div class="lobby-card">
+                <div class="lobby-header">
+                    <h2>TANK WARS</h2>
+                    <p class="subtitle">// MULTIPLAYER DECK</p>
+                </div>
+                
+                <div class="lobby-body">
+                    <button id="quick-match-btn" class="lobby-btn primary">QUICK MATCH</button>
+                    
+                    <div class="lobby-separator">
+                        <span>OR</span>
+                    </div>
+                    
+                    <div class="lobby-room-actions">
+                        <button id="create-room-btn" class="lobby-btn secondary">HOST PRIVATE MATCH</button>
+                        <div class="join-row">
+                            <input type="text" id="room-input" placeholder="ROOM CODE" maxlength="4">
+                            <button id="join-room-btn" class="lobby-btn join">JOIN</button>
+                        </div>
+                    </div>
+                    
+                    <div class="lobby-separator">
+                        <span>OR PLAY LOCAL</span>
+                    </div>
+                    <button id="local-play-btn" class="lobby-btn local">OFFLINE PRACTICE / LOCAL VS</button>
+                </div>
+                
+                <div id="lobby-status" class="lobby-status-panel hidden">
+                    <div class="spinner"></div>
+                    <span id="lobby-status-text">Connecting to Ably channels...</span>
+                    <button id="cancel-matchmaking-btn" class="lobby-btn cancel">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORTRAIT MODE ROTATION PROMPT -->
+        <div id="orientation-overlay">
+            <div class="orientation-content">
+                <div class="phone-icon-animation">🔄</div>
+                <h3>LANDSCAPE RECOMMENDED</h3>
+                <p>Please rotate your device for optimal artillery targeting.</p>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="dist/engine.js"></script>
+</body>
+</html>
