@@ -99,77 +99,89 @@ export class NetworkManager {
     if (!this.queueChannel) return;
     this.role = 'local';
 
-    // 1. Enter the public queue
-    await this.queueChannel.presence.enter({
-      status: 'waiting',
-      roomId: this.myClientId,
-      timestamp: Date.now()
-    });
+    try {
+      // 1. Explicitly attach to the queue channel first
+      await this.queueChannel.attach();
 
-    // 2. Scan active players in queue
-    const members = await this.queueChannel.presence.get();
-    
-    // Look for other waiting players
-    const waitingPlayers = members.filter(
-      (m: any) => m.clientId !== this.myClientId && m.data?.status === 'waiting'
-    );
-
-    if (waitingPlayers.length > 0) {
-      // Sort to match oldest waiting challenger (First-In, First-Out)
-      waitingPlayers.sort((a: any, b: any) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
-      const targetHost = waitingPlayers[0];
-      const hostRoomId = targetHost.clientId;
-
-      this.activeRoomCode = hostRoomId;
-      this.role = 'guest';
-
-      // Join host's private channel
-      this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
-      this.subscribeToGameChannel();
-
-      // Notify host that we are joining
-      await this.gameChannel.publish('handshake', { guestId: this.myClientId });
-      
-      // Update public status
-      await this.queueChannel.presence.update({
-        status: 'matched',
-        roomId: hostRoomId,
+      // 2. Enter the public queue
+      await this.queueChannel.presence.enter({
+        status: 'waiting',
+        roomId: this.myClientId,
         timestamp: Date.now()
       });
 
-      // Leave the queue
-      this.queueChannel.presence.leave();
-      onMatchStart('guest');
-    } else {
-      // No one waiting, host a new room
-      this.role = 'host';
-      this.activeRoomCode = this.myClientId;
+      // 3. Scan active players in queue (guard against undefined results)
+      const members = (await this.queueChannel.presence.get()) || [];
+      
+      // Look for other waiting players
+      const waitingPlayers = members.filter(
+        (m: any) => m.clientId !== this.myClientId && m.data?.status === 'waiting'
+      );
 
-      this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
-      this.subscribeToGameChannel();
+      if (waitingPlayers.length > 0) {
+        // Sort to match oldest waiting challenger (First-In, First-Out)
+        waitingPlayers.sort((a: any, b: any) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
+        const targetHost = waitingPlayers[0];
+        const hostRoomId = targetHost.clientId;
 
-      // Listen for challenge handshake
-      this.gameChannel.subscribe('handshake', async (msg: any) => {
-        console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
+        this.activeRoomCode = hostRoomId;
+        this.role = 'guest';
+
+        // Join host's private channel
+        this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
+        await this.gameChannel.attach();
+        this.subscribeToGameChannel();
+
+        // Notify host that we are joining
+        await this.gameChannel.publish('handshake', { guestId: this.myClientId });
         
-        // Remove from public queue
+        // Update public status
+        await this.queueChannel.presence.update({
+          status: 'matched',
+          roomId: hostRoomId,
+          timestamp: Date.now()
+        });
+
+        // Leave the queue
         this.queueChannel.presence.leave();
-        this.gameChannel.unsubscribe('handshake');
+        onMatchStart('guest');
+      } else {
+        // No one waiting, host a new room
+        this.role = 'host';
+        this.activeRoomCode = this.myClientId;
 
-        // Host generates initial sync state (terrain seed and initial wind)
-        const initialWind = (Math.random() - 0.5) * 2.0;
-        const terrainSeed = Date.now();
+        this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
+        await this.gameChannel.attach();
+        this.subscribeToGameChannel();
 
-        await this.gameChannel.publish('game_event', {
-          type: 'game_start',
-          data: { windX: initialWind, seed: terrainSeed }
-        } as GameEventPayload);
+        // Listen for challenge handshake
+        this.gameChannel.subscribe('handshake', async (msg: any) => {
+          console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
+          
+          // Remove from public queue
+          this.queueChannel.presence.leave();
+          this.gameChannel.unsubscribe('handshake');
 
-        if (this.onGameStartCallback) {
-          this.onGameStartCallback(initialWind, terrainSeed);
-        }
-        onMatchStart('host');
-      });
+          // Host generates initial sync state (terrain seed and initial wind)
+          const initialWind = (Math.random() - 0.5) * 2.0;
+          const terrainSeed = Date.now();
+
+          await this.gameChannel.publish('game_event', {
+            type: 'game_start',
+            data: { windX: initialWind, seed: terrainSeed }
+          } as GameEventPayload);
+
+          if (this.onGameStartCallback) {
+            this.onGameStartCallback(initialWind, terrainSeed);
+          }
+          onMatchStart('host');
+        });
+      }
+    } catch (err) {
+      console.error("Matchmaking error:", err);
+      if (this.onDisconnectCallback) {
+        this.onDisconnectCallback("Connection error during matchmaking.");
+      }
     }
   }
 
@@ -183,6 +195,7 @@ export class NetworkManager {
     this.role = 'host';
 
     this.gameChannel = this.client.channels.get(`tankwars-room-${code}`);
+    await this.gameChannel.attach();
     this.subscribeToGameChannel();
 
     // Listen for guest handshake
@@ -216,6 +229,7 @@ export class NetworkManager {
     this.role = 'guest';
 
     this.gameChannel = this.client.channels.get(`tankwars-room-${this.activeRoomCode}`);
+    await this.gameChannel.attach();
     this.subscribeToGameChannel();
 
     // Send handshake
