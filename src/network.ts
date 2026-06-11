@@ -66,7 +66,8 @@ export class NetworkManager {
         this.client = new Ably.Realtime({
           key: key,
           clientId: this.myClientId,
-          environment: isSandbox ? 'sandbox' : undefined
+          routingPolicy: isSandbox ? 'sandbox' : undefined,
+          nonprod: isSandbox ? true : undefined
         });
 
         this.client.connection.on('connected', () => {
