@@ -50,18 +50,6 @@ export class Player {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const data = imgData.data;
-                    for (let i = 0; i < data.length; i += 4) {
-                        const r = data[i];
-                        const g = data[i + 1];
-                        const b = data[i + 2];
-                        // Key out solid black background and dark drop shadows from generated sprite sheets
-                        if (r < 85 && g < 85 && b < 85) {
-                            data[i + 3] = 0; // Transparent
-                        }
-                    }
-                    ctx.putImageData(imgData, 0, 0);
                 }
                 const trimmed = Player.trimCanvas(canvas);
                 resolve(trimmed);
@@ -76,16 +64,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.9').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.2.0').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.9').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.2.0').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.9').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.2.0').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.9').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.2.0').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
