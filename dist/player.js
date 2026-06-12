@@ -200,30 +200,32 @@ export class Player {
         ctx.translate(-x, -y);
         // 1. Draw Chassis (Tank Body - Sitting flush at y-32 to y)
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
+        const jointOffsetX = this.type === 'player' ? -5 : 5;
         if (chassisImg && chassisImg.width > 0) {
             ctx.save();
             // Player 1 (blue) is facing left in the raw image, so we flip it horizontally to face right.
             // AI/Opponent (orange) faces right in the raw image, but we flip it to face left.
+            // Offset the drawing by +5px (which shifts both chassis rearward relative to tracks)
             if (this.type === 'player') {
                 ctx.translate(x, y - 16);
                 ctx.scale(-1, 1);
-                ctx.drawImage(chassisImg, -bodyWidth / 2, -16, bodyWidth, 32);
+                ctx.drawImage(chassisImg, -bodyWidth / 2 + 5, -16, bodyWidth, 32);
             }
             else {
                 ctx.translate(x, y - 16);
-                ctx.drawImage(chassisImg, -bodyWidth / 2, -16, bodyWidth, 32);
+                ctx.drawImage(chassisImg, -bodyWidth / 2 + 5, -16, bodyWidth, 32);
             }
             ctx.restore();
         }
         else {
             ctx.fillStyle = mainColor;
             ctx.beginPath();
-            ctx.roundRect(x - bodyWidth / 2, y - 31, bodyWidth, 22, 6);
+            ctx.roundRect(x - bodyWidth / 2 + jointOffsetX, y - 31, bodyWidth, 22, 6);
             ctx.fill();
             // Tank cabin/turret base
             ctx.fillStyle = secondaryColor;
             ctx.beginPath();
-            ctx.arc(x, y - 28, 18, Math.PI, 0);
+            ctx.arc(x + jointOffsetX, y - 28, 18, Math.PI, 0);
             ctx.fill();
         }
         // 2. Draw Wheels / Tracks on top of Chassis bottom to cover static treads in the image
@@ -261,12 +263,12 @@ export class Player {
             ctx.stroke();
             ctx.restore();
         }
-        // 3. Draw Rotatable Turret Barrel (Pivoted around turret well at y-28)
+        // 3. Draw Rotatable Turret Barrel (Pivoted around turret well at y-28, shifted with chassis offset)
         const turretImg = this.type === 'player' ? Player.blueTurretCanvas : Player.orangeTurretCanvas;
         if (turretImg && turretImg.width > 0) {
             ctx.save();
-            // Translate to the turret rotation joint position (centered on chassis, y-28)
-            ctx.translate(x, y - 28);
+            // Translate to the offset turret rotation joint position (centered on chassis, y-28)
+            ctx.translate(x + jointOffsetX, y - 28);
             // Rotate by the aim angle.
             ctx.rotate(-this.aimAngle);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
@@ -279,9 +281,9 @@ export class Player {
             ctx.lineWidth = 10;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(x, y - 28);
+            ctx.moveTo(x + jointOffsetX, y - 28);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
-            const barrelX = x + Math.cos(this.aimAngle) * finalBarrelLength;
+            const barrelX = x + jointOffsetX + Math.cos(this.aimAngle) * finalBarrelLength;
             const barrelY = (y - 28) - Math.sin(this.aimAngle) * finalBarrelLength;
             ctx.lineTo(barrelX, barrelY);
             ctx.stroke();
