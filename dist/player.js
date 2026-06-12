@@ -76,16 +76,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.0.8').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.0.9').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.0.8').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.0.9').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.0.8').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.0.9').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.0.8').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.0.9').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
@@ -167,7 +167,6 @@ export class Player {
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
         if (chassisImg && chassisImg.width > 0) {
             ctx.save();
-            ctx.imageSmoothingEnabled = false; // Force sharp pixelated scaling for pixel-art clarity
             ctx.drawImage(chassisImg, x - bodyWidth / 2, y - 32, bodyWidth, 32);
             ctx.restore();
         }
@@ -220,7 +219,6 @@ export class Player {
             ctx.rotate(-this.aimAngle);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
             // Draw the gun barrel (scaled thickness: 20px to match massive body)
-            ctx.imageSmoothingEnabled = false; // Force sharp pixelated scaling for pixel-art clarity
             ctx.drawImage(turretImg, 0, -10, finalBarrelLength, 20);
             ctx.restore();
         }
