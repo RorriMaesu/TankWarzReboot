@@ -16,6 +16,7 @@ import { Projectile } from './projectile.js';
 import { Renderer } from './renderer.js';
 import { UIManager } from './ui_manager.js';
 import { AudioManager } from './audio.js';
+import { BackgroundManager } from './background_manager.js';
 export class GameEngine {
     constructor(canvasId) {
         this.state = 'PLAYER_TURN';
@@ -155,6 +156,7 @@ export class GameEngine {
         this.renderer = new Renderer(canvasId, this.config);
         this.uiManager = new UIManager();
         this.audio = new AudioManager();
+        this.background = new BackgroundManager(this.config);
         this.physics = new PhysicsEngine(this.config);
         this.terrain = new Terrain(this.config.canvasWidth, this.config.canvasHeight);
         this.ai = new AIController(this.config, this.terrain);
@@ -670,6 +672,8 @@ export class GameEngine {
     }
     updatePhysics() {
         var _a, _b;
+        // 0. Update post-apocalyptic background animation
+        this.background.update(this.config.wind.x);
         // 1. Update players physics (tanks falling & remote position interpolation)
         this.players.forEach(p => {
             if (this.isMultiplayer && p.targetX !== null) {
@@ -1126,6 +1130,10 @@ export class GameEngine {
             const dy = (Math.random() - 0.5) * this.shakeIntensity;
             ctx.translate(dx, dy);
         }
+        // Draw post-apocalyptic background under the terrain with parallax panning
+        const activePlayer = this.players[0];
+        const cameraOffsetX = activePlayer ? activePlayer.position.x : 0;
+        this.background.draw(ctx, cameraOffsetX);
         // 1. Draw Terrain
         this.renderer.drawTerrain(this.terrain, this.turnsElapsed);
         // 1b. Draw wind-responsive nanite fog
