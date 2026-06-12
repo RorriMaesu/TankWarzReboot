@@ -1,4 +1,44 @@
 export class Player {
+    static trimCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        if (!ctx)
+            return canvas;
+        const width = canvas.width;
+        const height = canvas.height;
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+        let minX = width, maxX = 0, minY = height, maxY = 0;
+        let hasPixels = false;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const alpha = data[idx + 3];
+                if (alpha > 0) {
+                    hasPixels = true;
+                    if (x < minX)
+                        minX = x;
+                    if (x > maxX)
+                        maxX = x;
+                    if (y < minY)
+                        minY = y;
+                    if (y > maxY)
+                        maxY = y;
+                }
+            }
+        }
+        if (!hasPixels)
+            return canvas;
+        const trimWidth = maxX - minX + 1;
+        const trimHeight = maxY - minY + 1;
+        const trimmedCanvas = document.createElement('canvas');
+        trimmedCanvas.width = trimWidth;
+        trimmedCanvas.height = trimHeight;
+        const trimmedCtx = trimmedCanvas.getContext('2d');
+        if (trimmedCtx) {
+            trimmedCtx.drawImage(canvas, minX, minY, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+        }
+        return trimmedCanvas;
+    }
     static loadAndChromaKey(src) {
         return new Promise((resolve) => {
             const img = new Image();
@@ -23,7 +63,8 @@ export class Player {
                     }
                     ctx.putImageData(imgData, 0, 0);
                 }
-                resolve(canvas);
+                const trimmed = Player.trimCanvas(canvas);
+                resolve(trimmed);
             };
             img.onerror = () => {
                 const canvas = document.createElement('canvas');
@@ -143,57 +184,57 @@ export class Player {
         ctx.translate(x, y);
         ctx.rotate(this.recoilAngle);
         ctx.translate(-x, -y);
-        // 2. Draw Chassis (Tank Body - Doubled in size)
+        // 2. Draw Chassis (Tank Body - Doubled in size, sitting flush on the tracks)
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
         if (chassisImg && chassisImg.width > 0) {
-            // Draw chassis image centered, sitting on top of the tracks (y-39 to y-7)
-            ctx.drawImage(chassisImg, x - bodyWidth / 2, y - 39, bodyWidth, 32);
+            // Draw chassis image centered, sitting on top of the tracks (y-31 to y-7, height 24)
+            ctx.drawImage(chassisImg, x - bodyWidth / 2, y - 31, bodyWidth, 24);
         }
         else {
             ctx.fillStyle = mainColor;
             ctx.beginPath();
-            ctx.roundRect(x - bodyWidth / 2, y - 38, bodyWidth, 22, 6);
+            ctx.roundRect(x - bodyWidth / 2, y - 30, bodyWidth, 16, 5);
             ctx.fill();
             // Tank cabin/turret base
             ctx.fillStyle = secondaryColor;
             ctx.beginPath();
-            ctx.arc(x, y - 37, 18, Math.PI, 0);
+            ctx.arc(x, y - 29, 13, Math.PI, 0);
             ctx.fill();
         }
-        // 3. Draw Rotatable Turret Barrel (Doubled in size)
+        // 3. Draw Rotatable Turret Barrel (Pivoted around turret well)
         const turretImg = this.type === 'player' ? Player.blueTurretCanvas : Player.orangeTurretCanvas;
         if (turretImg && turretImg.width > 0) {
             ctx.save();
-            // Translate to the turret rotation joint position (centered on chassis, raised for height)
-            ctx.translate(x, y - 37);
+            // Translate to the turret rotation joint position (centered on chassis, y-29)
+            ctx.translate(x, y - 29);
             // Rotate by the aim angle.
             ctx.rotate(-this.aimAngle);
-            const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
-            // Draw the gun barrel (scaled thickness: 20px to match doubled body)
-            ctx.drawImage(turretImg, 0, -10, finalBarrelLength, 20);
+            const finalBarrelLength = Math.max(16, 42 - this.recoilOffset);
+            // Draw the gun barrel (scaled thickness: 16px to match massive body)
+            ctx.drawImage(turretImg, 0, -8, finalBarrelLength, 16);
             ctx.restore();
         }
         else {
             ctx.strokeStyle = '#64748b'; // Metallic grey
-            ctx.lineWidth = 10;
+            ctx.lineWidth = 8;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(x, y - 39);
-            const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
+            ctx.moveTo(x, y - 31);
+            const finalBarrelLength = Math.max(16, 42 - this.recoilOffset);
             const barrelX = x + Math.cos(this.aimAngle) * finalBarrelLength;
-            const barrelY = (y - 39) - Math.sin(this.aimAngle) * finalBarrelLength;
+            const barrelY = (y - 31) - Math.sin(this.aimAngle) * finalBarrelLength;
             ctx.lineTo(barrelX, barrelY);
             ctx.stroke();
             // Muzzle brake
             ctx.fillStyle = '#475569';
             ctx.beginPath();
-            ctx.arc(barrelX, barrelY, 9, 0, Math.PI * 2);
+            ctx.arc(barrelX, barrelY, 7, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.restore(); // restore recoil space
-        // 4. Draw engine exhaust glow (Sitting statically on chassis, raised for height)
-        const exhaustX = this.type === 'player' ? x - 41 : x + 41;
-        const exhaustY = y - 24;
+        // 4. Draw engine exhaust glow (Sitting statically on chassis, y-16)
+        const exhaustX = this.type === 'player' ? x - 33 : x + 33;
+        const exhaustY = y - 16;
         ctx.save();
         const exhaustColor = this.type === 'player' ? '#38bdf8' : '#f87171';
         ctx.shadowColor = exhaustColor;
@@ -208,13 +249,13 @@ export class Player {
             ctx.save();
             const shieldGlowColor = mainColor;
             // Draw shield dome fill
-            const shieldRadGrad = ctx.createRadialGradient(x, y - 24, 10, x, y - 24, 58);
+            const shieldRadGrad = ctx.createRadialGradient(x, y - 19, 10, x, y - 19, 48);
             shieldRadGrad.addColorStop(0, 'rgba(0,0,0,0)');
             shieldRadGrad.addColorStop(0.85, this.type === 'player' ? 'rgba(59, 130, 246, 0.03)' : 'rgba(239, 68, 68, 0.03)');
             shieldRadGrad.addColorStop(1, this.type === 'player' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(239, 68, 68, 0.18)');
             ctx.fillStyle = shieldRadGrad;
             ctx.beginPath();
-            ctx.arc(x, y - 24, 58, 0, Math.PI * 2);
+            ctx.arc(x, y - 19, 48, 0, Math.PI * 2);
             ctx.fill();
             // Outer rotating glowing border
             ctx.strokeStyle = shieldGlowColor;
@@ -224,7 +265,7 @@ export class Player {
             ctx.setLineDash([12, 18]);
             ctx.lineDashOffset = (Date.now() / 50) % 30; // rotating effect
             ctx.beginPath();
-            ctx.arc(x, y - 24, 58, 0, Math.PI * 2);
+            ctx.arc(x, y - 19, 48, 0, Math.PI * 2);
             ctx.stroke();
             // Inner shell ring
             ctx.strokeStyle = '#ffffff';
@@ -232,7 +273,7 @@ export class Player {
             ctx.setLineDash([4, 16]);
             ctx.lineDashOffset = -(Date.now() / 80) % 20; // reverse rotation
             ctx.beginPath();
-            ctx.arc(x, y - 24, 54, 0, Math.PI * 2);
+            ctx.arc(x, y - 19, 44, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
         }
@@ -240,7 +281,7 @@ export class Player {
         const barWidth = 66;
         const barHeight = 5;
         const barX = x - barWidth / 2;
-        const barY = y - 66;
+        const barY = y - 50;
         // Red background
         ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
         ctx.fillRect(barX, barY, barWidth, barHeight);
@@ -252,7 +293,7 @@ export class Player {
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 9.5px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText(this.type === 'player' ? 'PLAYER 1' : 'OPPONENT', x, y - 73);
+        ctx.fillText(this.type === 'player' ? 'PLAYER 1' : 'OPPONENT', x, y - 57);
         ctx.restore();
     }
 }
