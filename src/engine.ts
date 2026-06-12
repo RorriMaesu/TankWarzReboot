@@ -952,8 +952,10 @@ export class GameEngine {
             } else {
               this.player2HasNuke = true;
             }
-            this.createFloatingText(player.position.x, player.position.y - 45, `NUKE UNLOCKED!`, '#fbbf24');
-            this.uiManager.logMessage(`${player.id} collected a TACTICAL NUKE! Select from dropdown to deploy.`);
+            // Give player maximum fuel to deploy the tactical nuke
+            player.fuel = player.maxFuel;
+            this.createFloatingText(player.position.x, player.position.y - 45, `NUKE READY + MAX FUEL!`, '#fbbf24');
+            this.uiManager.logMessage(`${player.id} collected a TACTICAL NUKE! Select from dropdown to deploy. Fuel refilled to max.`);
             
             // Sync HUD options
             this.synchronizeSliders(this.getActivePlayer());
