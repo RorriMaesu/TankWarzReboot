@@ -84,6 +84,8 @@ export class Player {
         this.recoilOffset = 0;
         this.recoilAngle = 0;
         this.targetX = null;
+        this.targetAimAngle = null;
+        this.targetAimPower = null;
         this.lastX = null;
         this.wheelAngle = 0;
         if (!Player.assetsLoaded) {
@@ -135,6 +137,28 @@ export class Player {
         // Smooth recoil decay (spring-damper style)
         this.recoilOffset = Math.max(0, this.recoilOffset - this.recoilOffset * 0.16);
         this.recoilAngle = this.recoilAngle * 0.82;
+        // Smoothly interpolate aim adjustments received from the network
+        if (this.targetAimAngle !== null) {
+            const da = this.targetAimAngle - this.aimAngle;
+            const shortestDa = Math.atan2(Math.sin(da), Math.cos(da));
+            if (Math.abs(shortestDa) > 0.002) {
+                this.aimAngle += shortestDa * 0.22; // glide 22% of distance per frame
+            }
+            else {
+                this.aimAngle = this.targetAimAngle;
+                this.targetAimAngle = null;
+            }
+        }
+        if (this.targetAimPower !== null) {
+            const dp = this.targetAimPower - this.aimPower;
+            if (Math.abs(dp) > 0.3) {
+                this.aimPower += dp * 0.22;
+            }
+            else {
+                this.aimPower = this.targetAimPower;
+                this.targetAimPower = null;
+            }
+        }
     }
     draw(ctx, isCurrentTurn) {
         // Proportions: Tracks are scaled up (width 72, height 13), Chassis is doubled in size (width 80, height 32)

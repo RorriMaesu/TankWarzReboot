@@ -21,6 +21,8 @@ export class Player {
   public recoilOffset: number = 0;
   public recoilAngle: number = 0;
   public targetX: number | null = null;
+  public targetAimAngle: number | null = null;
+  public targetAimPower: number | null = null;
   private lastX: number | null = null;
   private wheelAngle: number = 0;
 
@@ -160,6 +162,27 @@ export class Player {
     // Smooth recoil decay (spring-damper style)
     this.recoilOffset = Math.max(0, this.recoilOffset - this.recoilOffset * 0.16);
     this.recoilAngle = this.recoilAngle * 0.82;
+
+    // Smoothly interpolate aim adjustments received from the network
+    if (this.targetAimAngle !== null) {
+      const da = this.targetAimAngle - this.aimAngle;
+      const shortestDa = Math.atan2(Math.sin(da), Math.cos(da));
+      if (Math.abs(shortestDa) > 0.002) {
+        this.aimAngle += shortestDa * 0.22; // glide 22% of distance per frame
+      } else {
+        this.aimAngle = this.targetAimAngle;
+        this.targetAimAngle = null;
+      }
+    }
+    if (this.targetAimPower !== null) {
+      const dp = this.targetAimPower - this.aimPower;
+      if (Math.abs(dp) > 0.3) {
+        this.aimPower += dp * 0.22;
+      } else {
+        this.aimPower = this.targetAimPower;
+        this.targetAimPower = null;
+      }
+    }
   }
 
   public draw(ctx: CanvasRenderingContext2D, isCurrentTurn: boolean): void {

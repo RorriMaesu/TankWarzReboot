@@ -1739,8 +1739,8 @@ export class GameEngine {
     this.network.onAim((power, angle) => {
       const opponent = this.players[this.network.role === 'host' ? 1 : 0];
       if (opponent) {
-        opponent.aimPower = power;
-        opponent.aimAngle = angle;
+        opponent.targetAimPower = power;
+        opponent.targetAimAngle = angle;
       }
     });
 
@@ -1748,6 +1748,8 @@ export class GameEngine {
       const activePlayer = this.getActivePlayer();
       activePlayer.aimPower = power;
       activePlayer.aimAngle = angle;
+      activePlayer.targetAimPower = null;
+      activePlayer.targetAimAngle = null;
       activePlayer.weapon = { ...this.weapons[weaponType] };
 
       this.burstOwner = activePlayer.type;
