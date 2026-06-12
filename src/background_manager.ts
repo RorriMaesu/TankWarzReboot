@@ -46,7 +46,7 @@ export class BackgroundManager {
       console.error("BackgroundManager: sky.png failed to load", e);
       this.skyImg = null; 
     };
-    this.skyImg.src = 'assets/sky.png?v=1.2.1';
+    this.skyImg.src = 'assets/sky.png?v=1.2.2';
 
     // Load Distant Skyline
     this.distantImg = new Image();
@@ -58,7 +58,7 @@ export class BackgroundManager {
       console.error("BackgroundManager: distant_ruins.png failed to load", e);
       this.distantImg = null; 
     };
-    this.distantImg.src = 'assets/distant_ruins.png?v=1.2.1';
+    this.distantImg.src = 'assets/distant_ruins.png?v=1.2.2';
 
     // Load Near Skyline
     this.nearImg = new Image();
@@ -70,7 +70,7 @@ export class BackgroundManager {
       console.error("BackgroundManager: near_ruins.png failed to load", e);
       this.nearImg = null; 
     };
-    this.nearImg.src = 'assets/near_ruins.png?v=1.2.1';
+    this.nearImg.src = 'assets/near_ruins.png?v=1.2.2';
   }
 
   private initBuildings() {
