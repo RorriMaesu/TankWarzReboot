@@ -270,8 +270,8 @@ export class Player {
             // Rotate by the aim angle.
             ctx.rotate(-this.aimAngle);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
-            // Draw the gun barrel (scaled thickness: 20px to match massive body)
-            ctx.drawImage(turretImg, 0, -10, finalBarrelLength, 20);
+            // Draw the gun barrel (offset by -10px to center the rotating dome/base on the pivot joint)
+            ctx.drawImage(turretImg, -10, -10, finalBarrelLength + 10, 20);
             ctx.restore();
         }
         else {
@@ -279,10 +279,10 @@ export class Player {
             ctx.lineWidth = 10;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(x, y - 30);
+            ctx.moveTo(x, y - 28);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
             const barrelX = x + Math.cos(this.aimAngle) * finalBarrelLength;
-            const barrelY = (y - 30) - Math.sin(this.aimAngle) * finalBarrelLength;
+            const barrelY = (y - 28) - Math.sin(this.aimAngle) * finalBarrelLength;
             ctx.lineTo(barrelX, barrelY);
             ctx.stroke();
             // Muzzle brake
