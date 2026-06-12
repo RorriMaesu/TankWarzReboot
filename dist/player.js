@@ -120,6 +120,13 @@ export class Player {
     takeDamage(amount) {
         this.health = Math.max(0, this.health - amount);
     }
+    getBarrelTip() {
+        // 50 is resting barrel length, 40 is turret joint height offset relative to ground position
+        return {
+            x: this.position.x + Math.cos(this.aimAngle) * 50,
+            y: this.position.y - 40 - Math.sin(this.aimAngle) * 50
+        };
+    }
     /**
      * Applies gravity: pulls tank down if terrain height below it decreases.
      */

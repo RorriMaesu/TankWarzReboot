@@ -499,7 +499,7 @@ export class GameEngine {
         if (!this.burstWeapon)
             return;
         const owner = this.burstOwner === 'player' ? this.players[0] : this.players[1];
-        const spawnPos = { x: owner.position.x, y: owner.position.y - 18 };
+        const spawnPos = owner.getBarrelTip();
         const speed = this.burstPower * this.burstWeapon.speedMultiplier * (this.config.canvasWidth / 1024);
         const velocity = {
             x: Math.cos(this.burstAngle) * speed,
@@ -1088,7 +1088,7 @@ export class GameEngine {
             if (Date.now() - this.aiTurnStartTime > 1600) {
                 const ai = this.players[1];
                 const human = this.players[0];
-                const shot = this.ai.decideShot({ x: ai.position.x, y: ai.position.y - 18 }, { x: human.position.x, y: human.position.y - 18 }, this.difficulty, ai.fuel, this.player2HasNuke);
+                const shot = this.ai.decideShot(ai.getBarrelTip(), human.getBarrelTip(), this.difficulty, ai.fuel, this.player2HasNuke);
                 let selectedWeaponType = shot.weaponType;
                 let dynamicCost = this.getDynamicFuelCost(selectedWeaponType, shot.power);
                 // If AI cannot afford the selected weapon, it must fall back to the free small_cannon
@@ -1229,7 +1229,7 @@ export class GameEngine {
         const player = this.getActivePlayer();
         if (!player)
             return;
-        const spawnPos = { x: player.position.x, y: player.position.y - 18 };
+        const spawnPos = player.getBarrelTip();
         const speed = player.aimPower * player.weapon.speedMultiplier * (this.config.canvasWidth / 1024);
         let pos = Object.assign({}, spawnPos);
         let vel = {

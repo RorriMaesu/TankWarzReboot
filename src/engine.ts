@@ -582,7 +582,7 @@ export class GameEngine {
     if (!this.burstWeapon) return;
 
     const owner = this.burstOwner === 'player' ? this.players[0] : this.players[1];
-    const spawnPos = { x: owner.position.x, y: owner.position.y - 18 };
+    const spawnPos = owner.getBarrelTip();
 
     const speed = this.burstPower * this.burstWeapon.speedMultiplier * (this.config.canvasWidth / 1024);
     const velocity = {
@@ -1259,8 +1259,8 @@ export class GameEngine {
         const human = this.players[0];
 
         const shot = this.ai.decideShot(
-          { x: ai.position.x, y: ai.position.y - 18 },
-          { x: human.position.x, y: human.position.y - 18 },
+          ai.getBarrelTip(),
+          human.getBarrelTip(),
           this.difficulty,
           ai.fuel,
           this.player2HasNuke
@@ -1431,7 +1431,7 @@ export class GameEngine {
     const player = this.getActivePlayer();
     if (!player) return;
 
-    const spawnPos = { x: player.position.x, y: player.position.y - 18 };
+    const spawnPos = player.getBarrelTip();
     const speed = player.aimPower * player.weapon.speedMultiplier * (this.config.canvasWidth / 1024);
     
     let pos = { ...spawnPos };
