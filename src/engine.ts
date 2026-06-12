@@ -750,9 +750,19 @@ export class GameEngine {
 
     if (player.health <= 0 || ai.health <= 0) {
       this.state = 'GAME_OVER';
-      const winner = player.health > 0 ? 'player' : 'ai';
+
+      // Determine winner from the LOCAL player's perspective
+      let winner: string;
+      if (this.isMultiplayer) {
+        // Host controls players[0], guest controls players[1]
+        const localPlayer = this.network.role === 'host' ? player : ai;
+        winner = localPlayer.health > 0 ? 'player' : 'ai';
+      } else {
+        winner = player.health > 0 ? 'player' : 'ai';
+      }
+
       this.uiManager.showGameOver(winner);
-      this.uiManager.logMessage(`GAME OVER. ${player.health > 0 ? player.id : ai.id} IS VICTORIOUS!`);
+      this.uiManager.logMessage(`GAME OVER. ${winner === 'player' ? 'YOU ARE' : 'OPPONENT IS'} VICTORIOUS!`);
 
       if (this.isMultiplayer) {
         this.network.resetForRematch();
