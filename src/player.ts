@@ -68,8 +68,8 @@ export class Player {
   private static loadAndChromaKey(src: string): Promise<HTMLCanvasElement> {
     return new Promise((resolve) => {
       const img = new Image();
-      img.src = src;
       img.onload = () => {
+        console.log(`Player: Sprite asset loaded successfully: ${src} (${img.width}x${img.height})`);
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
@@ -80,26 +80,28 @@ export class Player {
         const trimmed = Player.trimCanvas(canvas);
         resolve(trimmed);
       };
-      img.onerror = () => {
+      img.onerror = (e) => {
+        console.error(`Player: Failed to load sprite asset from ${src}`, e);
         const canvas = document.createElement('canvas');
         resolve(canvas);
       };
+      img.src = src;
     });
   }
 
   public static loadAssets(): void {
     if (Player.assetsLoaded) return;
     Player.assetsLoaded = true;
-    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.2.0').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.2.1').then(canvas => {
       Player.blueChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.2.0').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.2.1').then(canvas => {
       Player.orangeChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_blue.png?v=1.2.0').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_blue.png?v=1.2.1').then(canvas => {
       Player.blueTurretCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_orange.png?v=1.2.0').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_orange.png?v=1.2.1').then(canvas => {
       Player.orangeTurretCanvas = canvas;
     });
   }
