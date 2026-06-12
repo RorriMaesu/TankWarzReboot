@@ -83,7 +83,7 @@ export class Player {
             const g = data[i + 1];
             const b = data[i + 2];
             // Key out solid black background and dark drop shadows from generated sprite sheets
-            if (r < 55 && g < 55 && b < 55) {
+            if (r < 85 && g < 85 && b < 85) {
               data[i + 3] = 0; // Transparent
             }
           }
@@ -102,16 +102,16 @@ export class Player {
   public static loadAssets(): void {
     if (Player.assetsLoaded) return;
     Player.assetsLoaded = true;
-    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.1').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.2').then(canvas => {
       Player.blueChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.1').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.2').then(canvas => {
       Player.orangeChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.1').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.2').then(canvas => {
       Player.blueTurretCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.1').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.2').then(canvas => {
       Player.orangeTurretCanvas = canvas;
     });
   }
