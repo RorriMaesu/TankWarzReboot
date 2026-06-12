@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -164,15 +164,6 @@
                         </div>
                     </div>
                     
-                    <div class="lobby-separator lobby-separator--key">
-                        <span>ABLY NETWORKING (OPTIONAL)</span>
-                    </div>
-                    <div class="key-config-row">
-                        <input type="password" id="ably-key-input" placeholder="PASTE ABLY API KEY (ID.KEY:SECRET)">
-                        <button id="save-key-btn" class="lobby-btn key-save">SAVE</button>
-                    </div>
-                    <p class="key-help-text">Leave empty to use isolated sandbox keys (same-device only). Get a free key from <a href="https://ably.com" target="_blank" style="color:#06b6d4;text-decoration:underline;">ably.com</a> for cross-device play.</p>
-                    
                     <div class="lobby-separator">
                         <span>OR PLAY LOCAL</span>
                     </div>
@@ -181,7 +172,7 @@
                 
                 <div id="lobby-status" class="lobby-status-panel hidden">
                     <div class="spinner"></div>
-                    <span id="lobby-status-text">Connecting to Ably channels...</span>
+                    <span id="lobby-status-text">Connecting to matchmaking lobby...</span>
                     <button id="cancel-matchmaking-btn" class="lobby-btn cancel">CANCEL</button>
                 </div>
             </div>

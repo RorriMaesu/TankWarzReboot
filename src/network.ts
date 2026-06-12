@@ -1,21 +1,38 @@
-declare const Ably: any;
+declare const mqtt: any;
 
-import { Vector2D, WeaponType } from './types.js';
+import { WeaponType } from './types.js';
 
 export interface GameEventPayload {
   type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn';
   data: any;
 }
 
+interface MqttPayload {
+  action: 'ping' | 'match' | 'handshake' | 'game_start' | 'game_event';
+  clientId?: string;
+  timestamp?: number;
+  hostId?: string;
+  guestId?: string;
+  type?: GameEventPayload['type'];
+  data?: any;
+}
+
 export class NetworkManager {
   private client: any = null;
-  private queueChannel: any = null;
-  private gameChannel: any = null;
   public myClientId: string;
   public activeRoomCode: string = '';
   public role: 'host' | 'guest' | 'local' = 'local';
-  private matchingInitiated: boolean = false;
   
+  private matchingInitiated: boolean = false;
+  private matchmakingInterval: any = null;
+  private activeRoomTopic: string = '';
+  
+  // Track queue heartbeats: clientId -> { timestamp, lastSeen }
+  private activeQueues: Map<string, { timestamp: number; lastSeen: number }> = new Map();
+  private myMatchStartTime: number = 0;
+  private onMatchStartCallback: ((role: 'host' | 'guest') => void) | null = null;
+  private onPrivateGuestJoinedCallback: (() => void) | null = null;
+
   // Callbacks registered by the game engine
   private onMoveCallback: ((x: number) => void) | null = null;
   private onFireCallback: ((power: number, angle: number, weaponType: WeaponType) => void) | null = null;
@@ -31,76 +48,49 @@ export class NetworkManager {
   }
 
   public init(apiKey?: string): Promise<boolean> {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
       try {
-        if (typeof Ably === 'undefined') {
-          console.error("Ably SDK not found. Make sure the script CDN tag is loaded.");
+        if (typeof mqtt === 'undefined') {
+          console.error("MQTT SDK not found. Make sure the script CDN tag is loaded in index.html.");
           resolve(false);
           return;
         }
 
-        let key = apiKey;
-        let isSandbox = !key;
-
-        if (isSandbox) {
-          try {
-            console.log("No API key provided. Provisioning temporary sandbox key...");
-            const res = await fetch('https://sandbox-rest.ably.io/apps', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                keys: [{ capability: '{"*":["*"]}' }]
-              })
-            });
-            const appInfo = await res.json();
-            key = appInfo.keys[0].keyStr;
-            console.log("Provisioned sandbox key:", key);
-            // Give Ably sandbox database a moment to propagate the temporary key
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          } catch (e) {
-            console.error("Failed to provision sandbox key:", e);
-            resolve(false);
-            return;
-          }
+        if (this.client && this.client.connected) {
+          resolve(true);
+          return;
         }
 
-        // Re-evaluate sandbox flag based on the actual key
-        const isSandboxKey = key && key.includes('_tmp_');
-        console.log(isSandboxKey 
-          ? "Connecting in Isolated Sandbox Mode (Local Tabs Only)" 
-          : "Connecting in Cloud Crossplay Mode (Custom API Key)");
+        console.log("Connecting to public key-less MQTT broker...");
+        
+        // Connect to HiveMQ public broker over secure WebSockets
+        this.client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+          clientId: this.myClientId,
+          clean: true,
+          keepalive: 30,
+          reconnectPeriod: 1000
+        });
 
-        const options: any = {
-          key: key,
-          clientId: this.myClientId
-        };
-
-        if (isSandboxKey) {
-          options.realtimeHost = 'sandbox-realtime.ably.io';
-          options.restHost = 'sandbox-rest.ably.io';
-          options.fallbackHosts = [
-            'sandbox-a-fallback.ably-realtime.com',
-            'sandbox-b-fallback.ably-realtime.com',
-            'sandbox-c-fallback.ably-realtime.com',
-            'sandbox-d-fallback.ably-realtime.com',
-            'sandbox-e-fallback.ably-realtime.com'
-          ];
-        }
-
-        this.client = new Ably.Realtime(options);
-
-        this.client.connection.on('connected', () => {
-          console.log("Connected to Ably cloud realtime network.");
-          this.queueChannel = this.client.channels.get('tankwars-public-queue');
+        this.client.on('connect', () => {
+          console.log("Connected to public MQTT realtime network.");
           resolve(true);
         });
 
-        this.client.connection.on('failed', (err: any) => {
-          console.error("Ably connection failed:", err);
+        this.client.on('error', (err: any) => {
+          console.error("MQTT connection error:", err);
           resolve(false);
         });
+
+        this.client.on('message', (topic: string, message: any) => {
+          try {
+            const payload = JSON.parse(message.toString()) as MqttPayload;
+            this.handleMqttMessage(topic, payload);
+          } catch (e) {
+            // Ignore non-JSON messages
+          }
+        });
       } catch (e) {
-        console.error("Error initializing Ably:", e);
+        console.error("Error initializing MQTT:", e);
         resolve(false);
       }
     });
@@ -120,124 +110,176 @@ export class NetworkManager {
    * Enters the public matchmaking queue and waits for an opponent.
    */
   public async startQuickMatch(onMatchStart: (role: 'host' | 'guest') => void): Promise<void> {
-    if (!this.queueChannel) return;
+    if (!this.client) return;
     this.role = 'local';
     this.matchingInitiated = false;
+    this.onMatchStartCallback = onMatchStart;
+    this.myMatchStartTime = Date.now();
+    this.activeQueues.clear();
 
-    try {
-      // 1. Explicitly attach to the queue channel first
-      await this.queueChannel.attach();
+    const queueTopic = 'tankwarz/reboot/lobby/queue';
+    this.client.subscribe(queueTopic);
 
-      // 2. Subscribe to presence events to scan for matches dynamically
-      this.queueChannel.presence.subscribe(() => {
-        this.checkForMatch(onMatchStart);
-      });
+    // Heartbeat loop: publish active presence and scan for matches
+    this.matchmakingInterval = setInterval(() => {
+      if (!this.client || this.matchingInitiated) return;
 
-      // 3. Enter the public queue
-      await this.queueChannel.presence.enter({
-        status: 'waiting',
-        roomId: this.myClientId,
-        timestamp: Date.now()
-      });
+      // 1. Send heartbeat
+      this.client.publish(queueTopic, JSON.stringify({
+        action: 'ping',
+        clientId: this.myClientId,
+        timestamp: this.myMatchStartTime
+      } as MqttPayload));
 
-      // 4. Run initial scan immediately
-      await this.checkForMatch(onMatchStart);
-    } catch (err) {
-      console.error("Matchmaking error:", err);
-      if (this.onDisconnectCallback) {
-        this.onDisconnectCallback("Connection error during matchmaking.");
+      // 2. Prune old peers
+      const now = Date.now();
+      for (const [cid, info] of this.activeQueues.entries()) {
+        if (now - info.lastSeen > 2500) {
+          this.activeQueues.delete(cid);
+        }
       }
-    }
-  }
 
-  private async checkForMatch(onMatchStart: (role: 'host' | 'guest') => void) {
-    if (this.matchingInitiated || !this.queueChannel) return;
+      // 3. Scan for match candidates
+      const waiting = Array.from(this.activeQueues.entries()).map(([cid, info]) => ({
+        clientId: cid,
+        timestamp: info.timestamp
+      }));
 
-    try {
-      const members = (await this.queueChannel.presence.get()) || [];
-      
-      // Filter players who are actively waiting
-      const waiting = members.filter((m: any) => m.data?.status === 'waiting');
-      if (waiting.length < 2) return; // Need at least 2 players to match
+      // Add ourselves
+      waiting.push({ clientId: this.myClientId, timestamp: this.myMatchStartTime });
 
-      // Sort deterministically: by timestamp first, then by clientId
-      waiting.sort((a: any, b: any) => {
-        const timeA = a.data?.timestamp || 0;
-        const timeB = b.data?.timestamp || 0;
-        if (timeA !== timeB) return timeA - timeB;
+      if (waiting.length < 2) return;
+
+      // Sort deterministically: oldest timestamp first, then lexicographically
+      waiting.sort((a, b) => {
+        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
         return a.clientId.localeCompare(b.clientId);
       });
 
-      const hostMember = waiting[0];
-      const guestMember = waiting[1];
+      const host = waiting[0];
+      const guest = waiting[1];
 
-      const amIHost = hostMember.clientId === this.myClientId;
-      const amIGuest = guestMember.clientId === this.myClientId;
+      if (host.clientId === this.myClientId) {
+        // We are the Host. Broadcast match agreement.
+        this.client.publish(queueTopic, JSON.stringify({
+          action: 'match',
+          hostId: host.clientId,
+          guestId: guest.clientId
+        } as MqttPayload));
+      }
+    }, 1000);
+  }
 
-      if (!amIHost && !amIGuest) return; // Not in the active match pair
+  private handleMqttMessage(topic: string, payload: MqttPayload) {
+    // 1. Queue logic
+    if (topic === 'tankwarz/reboot/lobby/queue') {
+      if (this.matchingInitiated) return;
 
-      this.matchingInitiated = true;
-      this.queueChannel.presence.unsubscribe();
+      if (payload.action === 'ping' && payload.clientId && payload.clientId !== this.myClientId) {
+        this.activeQueues.set(payload.clientId, {
+          timestamp: payload.timestamp || Date.now(),
+          lastSeen: Date.now()
+        });
+      }
 
-      if (amIHost) {
-        this.role = 'host';
-        this.activeRoomCode = this.myClientId;
+      if (payload.action === 'match' && payload.hostId && payload.guestId) {
+        const amIHost = payload.hostId === this.myClientId;
+        const amIGuest = payload.guestId === this.myClientId;
 
-        this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
-        await this.gameChannel.attach();
-        this.subscribeToGameChannel();
+        if (amIHost || amIGuest) {
+          this.matchingInitiated = true;
+          clearInterval(this.matchmakingInterval);
+          this.client.unsubscribe('tankwarz/reboot/lobby/queue');
 
-        this.gameChannel.subscribe('handshake', async (msg: any) => {
-          console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
-          this.gameChannel.unsubscribe('handshake');
-          this.queueChannel.presence.leave();
+          this.activeRoomCode = payload.hostId;
+          this.activeRoomTopic = `tankwarz/reboot/rooms/${payload.hostId}`;
+          this.client.subscribe(this.activeRoomTopic);
 
+          if (amIHost) {
+            this.role = 'host';
+            // Wait for guest handshake in the room topic
+          } else {
+            this.role = 'guest';
+            if (this.onMatchStartCallback) this.onMatchStartCallback('guest');
+            // Periodically publish handshake until game starts
+            let attempts = 0;
+            const sendHandshake = () => {
+              if (this.role !== 'guest' || !this.client) return;
+              this.client.publish(this.activeRoomTopic, JSON.stringify({
+                action: 'handshake',
+                guestId: this.myClientId
+              } as MqttPayload));
+
+              attempts++;
+              if (attempts < 10 && this.role === 'guest') {
+                setTimeout(sendHandshake, 1000);
+              }
+            };
+            setTimeout(sendHandshake, 300);
+          }
+        }
+      }
+      return;
+    }
+
+    // 2. Gameplay room logic
+    if (topic === this.activeRoomTopic) {
+      if (payload.action === 'handshake') {
+        if (this.role === 'host') {
+          console.log(`Challenger joined room: ${payload.guestId}`);
+          
+          if (this.onMatchStartCallback) this.onMatchStartCallback('host');
+          if (this.onPrivateGuestJoinedCallback) this.onPrivateGuestJoinedCallback();
+
+          // Initialize terrain/wind and broadcast start
           const initialWind = (Math.random() - 0.5) * 2.0;
           const terrainSeed = Date.now();
 
-          await this.gameChannel.publish('game_event', {
-            type: 'game_start',
-            data: { windX: initialWind, seed: terrainSeed }
-          } as GameEventPayload);
+          this.client.publish(this.activeRoomTopic, JSON.stringify({
+            action: 'game_start',
+            windX: initialWind,
+            seed: terrainSeed
+          } as any));
 
           if (this.onGameStartCallback) {
             this.onGameStartCallback(initialWind, terrainSeed);
           }
-          onMatchStart('host');
-        });
-      } else {
-        const hostRoomId = hostMember.clientId;
-        this.activeRoomCode = hostRoomId;
-        this.role = 'guest';
-
-        this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
-        await this.gameChannel.attach();
-        this.subscribeToGameChannel();
-
-        await this.queueChannel.presence.update({
-          status: 'matched',
-          roomId: hostRoomId,
-          timestamp: Date.now()
-        });
-
-        this.queueChannel.presence.leave();
-
-        let attempts = 0;
-        const sendHandshake = async () => {
-          if (this.role !== 'guest' || !this.gameChannel) return;
-          try {
-            await this.gameChannel.publish('handshake', { guestId: this.myClientId });
-            onMatchStart('guest');
-          } catch (e) {
-            if (attempts++ < 5) {
-              setTimeout(sendHandshake, 1000);
-            }
-          }
-        };
-        setTimeout(sendHandshake, 500);
+        }
       }
-    } catch (err) {
-      console.error("Match check error:", err);
+
+      if (payload.action === 'game_start') {
+        if (this.role === 'guest' && this.onGameStartCallback) {
+          // Confirm room role changes
+          this.onGameStartCallback(payload.data?.windX ?? (payload as any).windX ?? 0, payload.data?.seed ?? (payload as any).seed ?? Date.now());
+        }
+      }
+
+      if (payload.action === 'game_event') {
+        switch (payload.type) {
+          case 'move':
+            if (this.onMoveCallback) this.onMoveCallback(payload.data.x);
+            break;
+          case 'fire':
+            if (this.onFireCallback) {
+              this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
+            }
+            break;
+          case 'wind_sync':
+            if (this.onWindSyncCallback) this.onWindSyncCallback(payload.data.windX);
+            break;
+          case 'crate_drop':
+            if (this.onCrateDropCallback) {
+              this.onCrateDropCallback(payload.data.x, payload.data.crateType);
+            }
+            break;
+          case 'mine_spawn':
+            if (this.onMineSpawnCallback) this.onMineSpawnCallback(payload.data.x);
+            break;
+          case 'turn_end':
+            if (this.onTurnEndCallback) this.onTurnEndCallback();
+            break;
+        }
+      }
     }
   }
 
@@ -245,35 +287,14 @@ export class NetworkManager {
    * Hosts a private game room with a 4-letter room code
    */
   public async hostPrivateRoom(onGuestJoined: () => void): Promise<string> {
-    // Generate 4 letter code
+    if (!this.client) return '';
     const code = Math.random().toString(36).substring(2, 6).toUpperCase();
     this.activeRoomCode = code;
     this.role = 'host';
+    this.activeRoomTopic = `tankwarz/reboot/rooms/${code}`;
+    this.onPrivateGuestJoinedCallback = onGuestJoined;
 
-    this.gameChannel = this.client.channels.get(`tankwars-room-${code}`);
-    await this.gameChannel.attach();
-    this.subscribeToGameChannel();
-
-    // Listen for guest handshake
-    this.gameChannel.subscribe('handshake', async (msg: any) => {
-      console.log(`Guest connected to private room: ${msg.data.guestId}`);
-      this.gameChannel.unsubscribe('handshake');
-
-      // Generate seed and wind
-      const initialWind = (Math.random() - 0.5) * 2.0;
-      const terrainSeed = Date.now();
-
-      await this.gameChannel.publish('game_event', {
-        type: 'game_start',
-        data: { windX: initialWind, seed: terrainSeed }
-      } as GameEventPayload);
-
-      if (this.onGameStartCallback) {
-        this.onGameStartCallback(initialWind, terrainSeed);
-      }
-      onGuestJoined();
-    });
-
+    this.client.subscribe(this.activeRoomTopic);
     return code;
   }
 
@@ -281,15 +302,24 @@ export class NetworkManager {
    * Joins a private room using a 4-letter room code
    */
   public async joinPrivateRoom(code: string): Promise<boolean> {
-    this.activeRoomCode = code.toUpperCase();
+    if (!this.client) return false;
+    const cleanCode = code.toUpperCase();
+    this.activeRoomCode = cleanCode;
     this.role = 'guest';
+    this.activeRoomTopic = `tankwarz/reboot/rooms/${cleanCode}`;
 
-    this.gameChannel = this.client.channels.get(`tankwars-room-${this.activeRoomCode}`);
-    await this.gameChannel.attach();
-    this.subscribeToGameChannel();
+    this.client.subscribe(this.activeRoomTopic);
 
-    // Send handshake
-    await this.gameChannel.publish('handshake', { guestId: this.myClientId });
+    // Send initial handshake immediately
+    setTimeout(() => {
+      if (this.client) {
+        this.client.publish(this.activeRoomTopic, JSON.stringify({
+          action: 'handshake',
+          guestId: this.myClientId
+        } as MqttPayload));
+      }
+    }, 500);
+
     return true;
   }
 
@@ -297,61 +327,13 @@ export class NetworkManager {
    * Sends a game event payload to the other player
    */
   public sendEvent(type: GameEventPayload['type'], data: any) {
-    if (!this.gameChannel) return;
+    if (!this.client || !this.activeRoomTopic) return;
     
-    this.gameChannel.publish('game_event', {
+    this.client.publish(this.activeRoomTopic, JSON.stringify({
+      action: 'game_event',
       type,
       data
-    } as GameEventPayload);
-  }
-
-  /**
-   * Subscribes to events on the active private room channel
-   */
-  private subscribeToGameChannel() {
-    if (!this.gameChannel) return;
-
-    this.gameChannel.subscribe('game_event', (msg: any) => {
-      const payload = msg.data as GameEventPayload;
-      if (!payload) return;
-
-      switch (payload.type) {
-        case 'game_start':
-          if (this.role === 'guest' && this.onGameStartCallback) {
-            this.onGameStartCallback(payload.data.windX, payload.data.seed);
-          }
-          break;
-        case 'move':
-          if (this.onMoveCallback) this.onMoveCallback(payload.data.x);
-          break;
-        case 'fire':
-          if (this.onFireCallback) {
-            this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
-          }
-          break;
-        case 'wind_sync':
-          if (this.onWindSyncCallback) this.onWindSyncCallback(payload.data.windX);
-          break;
-        case 'crate_drop':
-          if (this.onCrateDropCallback) {
-            this.onCrateDropCallback(payload.data.x, payload.data.crateType);
-          }
-          break;
-        case 'mine_spawn':
-          if (this.onMineSpawnCallback) this.onMineSpawnCallback(payload.data.x);
-          break;
-        case 'turn_end':
-          if (this.onTurnEndCallback) this.onTurnEndCallback();
-          break;
-      }
-    });
-
-    // Detect if opponent leaves
-    this.gameChannel.presence.subscribe('leave', (member: any) => {
-      if (this.onDisconnectCallback) {
-        this.onDisconnectCallback("Opponent disconnected.");
-      }
-    });
+    } as MqttPayload));
   }
 
   /**
@@ -359,19 +341,21 @@ export class NetworkManager {
    */
   public disconnect() {
     try {
-      if (this.queueChannel) {
-        this.queueChannel.presence.unsubscribe();
-        this.queueChannel.presence.leave();
+      if (this.matchmakingInterval) {
+        clearInterval(this.matchmakingInterval);
+        this.matchmakingInterval = null;
       }
-      if (this.gameChannel) {
-        this.gameChannel.unsubscribe();
-        this.gameChannel.presence.leave();
+      if (this.client) {
+        this.client.unsubscribe('tankwarz/reboot/lobby/queue');
+        if (this.activeRoomTopic) {
+          this.client.unsubscribe(this.activeRoomTopic);
+        }
       }
     } catch (e) {
-      console.warn("Error disconnecting channels:", e);
+      console.warn("Error disconnecting MQTT topics:", e);
     }
-    this.gameChannel = null;
     this.activeRoomCode = '';
+    this.activeRoomTopic = '';
     this.role = 'local';
     this.matchingInitiated = false;
   }
