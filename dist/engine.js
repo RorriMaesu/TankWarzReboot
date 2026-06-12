@@ -31,6 +31,9 @@ export class GameEngine {
         this.isMultiplayer = false;
         this.isDraggingAim = false;
         this.lastMovePublishTime = 0;
+        this.lastTime = 0;
+        this.accumulator = 0;
+        this.TIME_STEP = 1000 / 60;
         this.aiTurnStartTime = null;
         this.difficulty = 'medium';
         this.gameMode = 'vs_ai';
@@ -154,9 +157,9 @@ export class GameEngine {
         this.setupLobbyHandlers();
         this.setupTouchControls();
         // Start main game loop
-        this.gameLoop();
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
-    initGame() {
+    initGame(seed) {
         this.players = [];
         this.projectiles = [];
         this.particles = [];
@@ -188,7 +191,8 @@ export class GameEngine {
         this.screenFlash = 0;
         this.ai.resetMemory();
         // Re-initialize terrain
-        this.terrain = new Terrain(this.config.canvasWidth, this.config.canvasHeight);
+        const activeSeed = seed !== null && seed !== void 0 ? seed : Math.floor(Math.random() * 1000000);
+        this.terrain = new Terrain(this.config.canvasWidth, this.config.canvasHeight, activeSeed);
         this.ai = new AIController(this.config, this.terrain);
         // Place player tanks on the terrain
         const p1X = 150;
@@ -611,12 +615,22 @@ export class GameEngine {
             this.uiManager.logMessage(`GAME OVER. ${player.health > 0 ? player.id : ai.id} IS VICTORIOUS!`);
         }
     }
-    gameLoop() {
-        this.update();
+    gameLoop(timestamp = 0) {
+        if (!this.lastTime)
+            this.lastTime = timestamp;
+        let elapsed = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+        if (elapsed > 250)
+            elapsed = 250; // Cap to prevent lag spikes
+        this.accumulator += elapsed;
+        while (this.accumulator >= this.TIME_STEP) {
+            this.updatePhysics();
+            this.accumulator -= this.TIME_STEP;
+        }
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
-    update() {
+    updatePhysics() {
         var _a, _b;
         // 1. Update players physics (tanks falling)
         this.players.forEach(p => p.update(this.terrain));
@@ -1300,7 +1314,7 @@ export class GameEngine {
         this.uiManager.logMessage(`A supply drop is parachuting in containing a ${type.toUpperCase()} crate!`);
     }
     initGameMultiplayer(windX, seed) {
-        this.initGame();
+        this.initGame(seed);
         // Override wind
         this.config.wind.x = windX;
         // Clear standard randomized mines and re-spawn them deterministically using the seed

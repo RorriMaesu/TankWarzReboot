@@ -68,6 +68,9 @@ export class GameEngine {
   private isMultiplayer: boolean = false;
   private isDraggingAim: boolean = false;
   private lastMovePublishTime: number = 0;
+  private lastTime: number = 0;
+  private accumulator: number = 0;
+  private readonly TIME_STEP: number = 1000 / 60;
   
   private aiTurnStartTime: number | null = null;
   private difficulty: 'easy' | 'medium' | 'expert' = 'medium';
@@ -202,10 +205,10 @@ export class GameEngine {
     this.setupTouchControls();
     
     // Start main game loop
-    this.gameLoop();
+    requestAnimationFrame((t) => this.gameLoop(t));
   }
 
-  private initGame() {
+  private initGame(seed?: number) {
     this.players = [];
     this.projectiles = [];
     this.particles = [];
@@ -239,7 +242,8 @@ export class GameEngine {
     this.ai.resetMemory();
 
     // Re-initialize terrain
-    this.terrain = new Terrain(this.config.canvasWidth, this.config.canvasHeight);
+    const activeSeed = seed ?? Math.floor(Math.random() * 1000000);
+    this.terrain = new Terrain(this.config.canvasWidth, this.config.canvasHeight, activeSeed);
     this.ai = new AIController(this.config, this.terrain);
 
     // Place player tanks on the terrain
@@ -726,13 +730,25 @@ export class GameEngine {
     }
   }
 
-  private gameLoop() {
-    this.update();
+  private gameLoop(timestamp: number = 0) {
+    if (!this.lastTime) this.lastTime = timestamp;
+    let elapsed = timestamp - this.lastTime;
+    this.lastTime = timestamp;
+
+    if (elapsed > 250) elapsed = 250; // Cap to prevent lag spikes
+
+    this.accumulator += elapsed;
+
+    while (this.accumulator >= this.TIME_STEP) {
+      this.updatePhysics();
+      this.accumulator -= this.TIME_STEP;
+    }
+
     this.draw();
-    requestAnimationFrame(() => this.gameLoop());
+    requestAnimationFrame((t) => this.gameLoop(t));
   }
 
-  private update() {
+  private updatePhysics() {
     // 1. Update players physics (tanks falling)
     this.players.forEach(p => p.update(this.terrain));
 
@@ -1516,7 +1532,7 @@ export class GameEngine {
   }
 
   private initGameMultiplayer(windX: number, seed: number) {
-    this.initGame();
+    this.initGame(seed);
     
     // Override wind
     this.config.wind.x = windX;

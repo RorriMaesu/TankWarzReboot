@@ -1,19 +1,42 @@
+class SeededRandom {
+    constructor(seed) {
+        this.seed = seed;
+    }
+    // Returns a pseudo-random float between 0 and 1
+    next() {
+        const x = Math.sin(this.seed++) * 10000;
+        return x - Math.floor(x);
+    }
+    // Returns a pseudo-random float between min and max
+    range(min, max) {
+        return min + this.next() * (max - min);
+    }
+}
 export class Terrain {
-    constructor(width, height) {
+    constructor(width, height, seed) {
         this.heights = [];
         this.width = width;
         this.height = height;
-        this.initializeHeights();
+        this.initializeHeights(seed);
     }
-    initializeHeights() {
+    initializeHeights(seed) {
         this.heights = new Array(this.width);
+        const rng = new SeededRandom(seed !== null && seed !== void 0 ? seed : 12345);
+        // Generate random coefficients for hills
+        const freq1 = rng.range(0.002, 0.006);
+        const amp1 = rng.range(50, 90);
+        const freq2 = rng.range(0.01, 0.02);
+        const amp2 = rng.range(15, 35);
+        const freq3 = rng.range(0.025, 0.04);
+        const amp3 = rng.range(4, 12);
+        const baseHeightPct = rng.range(0.4, 0.5);
         for (let x = 0; x < this.width; x++) {
             // Procedural terrain: combination of sine waves for rolling hills
-            const hill1 = Math.sin(x * 0.004) * 80;
-            const hill2 = Math.cos(x * 0.015) * 25;
-            const hill3 = Math.sin(x * 0.03) * 8;
+            const hill1 = Math.sin(x * freq1) * amp1;
+            const hill2 = Math.cos(x * freq2) * amp2;
+            const hill3 = Math.sin(x * freq3) * amp3;
             // Base ground height from bottom of screen
-            this.heights[x] = this.height * 0.45 + hill1 + hill2 + hill3;
+            this.heights[x] = this.height * baseHeightPct + hill1 + hill2 + hill3;
         }
     }
     /**
