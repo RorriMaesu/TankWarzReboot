@@ -937,7 +937,7 @@ button:not(#fire-button):active {
         align-items: center;
         gap: 10px;
         padding: 4px 12px 4px 135px; /* Reserve left side for D-pad */
-        height: 50px;
+        height: 56px;
         box-sizing: border-box;
         border-radius: 12px;
         background: rgba(15, 23, 42, 0.65);
@@ -975,7 +975,7 @@ button:not(#fire-button):active {
         background: rgba(255, 255, 255, 0.02);
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.04);
-        height: 38px;
+        height: 44px;
         box-sizing: border-box;
         margin: 0;
         flex: 1;
@@ -993,7 +993,12 @@ button:not(#fire-button):active {
     }
     
     .control-group--wide {
-        flex: 1.2;
+        flex: 1.5;
+    }
+    
+    /* Hide weapon label on mobile — the dropdown is self-explanatory */
+    .control-group--wide .label {
+        display: none;
     }
     
     .control-group .label {
@@ -1004,10 +1009,15 @@ button:not(#fire-button):active {
     
     select {
         padding: 3px 6px;
-        font-size: 0.75rem;
-        height: 28px;
+        font-size: 0.72rem;
+        height: 30px;
         border-radius: 6px;
         background: #1e293b;
+        max-width: 100%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        flex-shrink: 1;
+        min-width: 0;
     }
     
     select:hover {
@@ -1038,25 +1048,42 @@ button:not(#fire-button):active {
     }
     
     input[type="range"] {
-        height: 4px;
+        height: 8px;
+        border-radius: 4px;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
     }
     
     input[type="range"]::-webkit-slider-thumb:hover {
         transform: none;
     }
     
+    input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--accent-color);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 0 6px var(--accent-glow);
+    }
+    
     /* Fire Button (Circular Floating Design) */
     button#fire-button {
-        width: 52px;
-        height: 52px;
-        min-width: 52px;
+        width: 56px;
+        height: 56px;
+        min-width: 56px;
         border-radius: 50%;
         font-size: 0.82rem;
         padding: 0;
         margin: 0;
         align-self: center;
-        border: 2px solid rgba(251, 191, 36, 0.5);
+        border: 2px solid transparent; /* Border color synced dynamically by JS */
         box-shadow: 0 0 15px rgba(245, 158, 11, 0.45);
+        animation: mobile-fire-pulse 2.5s infinite ease-in-out; /* Mobile-specific pulse without vertical offset */
     }
     
     button#fire-button:hover {
@@ -1076,6 +1103,12 @@ button:not(#fire-button):active {
         left: calc(12px + env(safe-area-inset-left));
         gap: 10px;
         z-index: 1000;
+        transition: opacity 0.3s ease;
+    }
+    
+    #mobile-dpad.dpad-dimmed {
+        opacity: 0.25;
+        pointer-events: none;
     }
     
     .dpad-btn {
@@ -1160,6 +1193,22 @@ button:not(#fire-button):active {
     .lobby-btn.join {
         width: 70px;
     }
+    
+    /* Matchmaking Status Panel Mobile */
+    .lobby-status-panel {
+        padding: 16px;
+    }
+    
+    .spinner {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 12px;
+    }
+    
+    #lobby-status-text {
+        font-size: 0.8rem;
+        margin-bottom: 16px;
+    }
 
     /* Game Over Screen Mobile Scaling */
     .game-over-content {
@@ -1192,4 +1241,10 @@ button:not(#fire-button):active {
     button:not(#fire-button):active {
         transform: scale(0.96);
     }
+}
+
+/* Mobile-specific fire button pulse (no vertical offset shadow) */
+@keyframes mobile-fire-pulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.45); }
+    50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.7); }
 }

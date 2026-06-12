@@ -88,23 +88,31 @@ export class UIManager {
         if (controls) {
             const showControls = state === 'PLAYER_TURN' || (state === 'ENEMY_TURN' && gameMode === 'pvp');
             controls.classList.toggle('hidden', !showControls);
-            // Fire button color follows active player theme
+            // Fire button color follows active player theme (including border for mobile circular style)
             const fireButton = document.getElementById('fire-button');
             if (fireButton) {
                 if (state === 'PLAYER_TURN') {
                     fireButton.style.background = 'linear-gradient(160deg, #3b82f6 0%, #1d4ed8 100%)';
                     fireButton.style.color = '#ffffff';
+                    fireButton.style.borderColor = 'rgba(59, 130, 246, 0.5)';
                     fireButton.style.setProperty('--fire-glow', 'rgba(59,130,246,0.55)');
                 }
                 else if (state === 'ENEMY_TURN' && gameMode === 'pvp') {
                     fireButton.style.background = 'linear-gradient(160deg, #a78bfa 0%, #6d28d9 100%)';
                     fireButton.style.color = '#ffffff';
+                    fireButton.style.borderColor = 'rgba(167, 139, 250, 0.5)';
                     fireButton.style.setProperty('--fire-glow', 'rgba(167,139,250,0.55)');
                 }
                 else {
                     fireButton.style.background = '';
                     fireButton.style.color = '';
+                    fireButton.style.borderColor = '';
                 }
+            }
+            // D-pad dimming: fade out when it's not the active player's turn
+            const dpad = document.getElementById('mobile-dpad');
+            if (dpad) {
+                dpad.classList.toggle('dpad-dimmed', !showControls);
             }
         }
         // Wind indicator
