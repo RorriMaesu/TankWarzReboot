@@ -76,16 +76,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.2').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.3').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.2').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.3').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.2').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.3').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.2').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.3').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
@@ -153,11 +153,6 @@ export class Player {
         const x = this.position.x;
         const y = this.position.y;
         ctx.save();
-        // Draw simple shadow (scaled to body width)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 2, bodyWidth / 2, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
         const mainColor = this.type === 'player' ? '#3b82f6' : '#ef4444'; // Electric blue or vibrant red
         const secondaryColor = this.type === 'player' ? '#1d4ed8' : '#b91c1c';
         // Apply recoil translation/rotation (No suspension bobbing)
