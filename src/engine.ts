@@ -597,7 +597,8 @@ export class GameEngine {
       this.network.sendEvent('fire', {
         power: player.aimPower,
         angle: player.aimAngle,
-        weaponType: weapon.type
+        weaponType: weapon.type,
+        fuel: player.fuel
       });
     }
 
@@ -758,6 +759,12 @@ export class GameEngine {
           
           this.createFloatingText(player.position.x, player.position.y - 40, displayMsg, '#ef4444');
           this.uiManager.logMessage(`${player.id} took ${actualDamage} splash damage (Kinetic Mult: ${kineticMultiplier.toFixed(2)}x).`);
+
+          const isLocal = (this.network.role === 'host' && player.type === 'player') ||
+                          (this.network.role === 'guest' && player.type === 'ai');
+          if (isLocal) {
+            this.sendStatusSync();
+          }
         }
       }
     });
@@ -959,6 +966,12 @@ export class GameEngine {
             
             // Sync HUD options
             this.synchronizeSliders(this.getActivePlayer());
+          }
+
+          const isLocal = (this.network.role === 'host' && player.type === 'player') ||
+                          (this.network.role === 'guest' && player.type === 'ai');
+          if (isLocal) {
+            this.sendStatusSync();
           }
 
           this.crates.splice(i, 1);
@@ -1294,6 +1307,12 @@ export class GameEngine {
             const rechargeColor = lastActivePlayer.type === 'player' ? '#3b82f6' : '#ef4444';
             this.createFloatingText(lastActivePlayer.position.x, lastActivePlayer.position.y - 45, rechargeMsg, rechargeColor);
             this.uiManager.logMessage(`${lastActivePlayer.id} recharged: ${rechargeMsg}`);
+
+            const isLocalEndOfTurn = (this.network.role === 'host' && this.burstOwner === 'player') ||
+                                     (this.network.role === 'guest' && this.burstOwner === 'ai');
+            if (this.isMultiplayer && isLocalEndOfTurn) {
+              this.sendStatusSync();
+            }
             
             this.playerMovedThisTurn = false;
 
@@ -1673,6 +1692,17 @@ export class GameEngine {
     return false;
   }
 
+  private sendStatusSync() {
+    if (!this.isMultiplayer) return;
+    const localPlayer = this.players[this.network.role === 'host' ? 0 : 1];
+    const hasNuke = this.network.role === 'host' ? this.player1HasNuke : this.player2HasNuke;
+    this.network.sendEvent('status_sync', {
+      health: localPlayer.health,
+      fuel: localPlayer.fuel,
+      hasNuke: hasNuke
+    });
+  }
+
   private spawnSupplyCrateSpecific(x: number, type: 'heal' | 'fuel' | 'nuke') {
     this.crates.push({
       id: `crate-${Date.now()}`,
@@ -1740,6 +1770,20 @@ export class GameEngine {
       this.checkTriggerRematch();
     });
 
+    this.network.onStatusSync((health, fuel, hasNuke) => {
+      const opponent = this.players[this.network.role === 'host' ? 1 : 0];
+      if (opponent) {
+        opponent.health = health;
+        opponent.fuel = fuel;
+        if (this.network.role === 'host') {
+          this.player2HasNuke = hasNuke;
+        } else {
+          this.player1HasNuke = hasNuke;
+        }
+        this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
+      }
+    });
+
     this.network.onGameStart((windX, seed) => {
       this.isMultiplayer = true;
       this.gameMode = 'pvp';
@@ -1750,10 +1794,14 @@ export class GameEngine {
       this.initGameMultiplayer(windX, seed);
     });
 
-    this.network.onMove((x) => {
+    this.network.onMove((x, fuel) => {
       const activePlayer = this.getActivePlayer();
       if (activePlayer) {
         activePlayer.targetX = x;
+        if (fuel !== undefined) {
+          activePlayer.fuel = fuel;
+        }
+        this.playerMovedThisTurn = true;
       }
     });
 
@@ -1765,7 +1813,7 @@ export class GameEngine {
       }
     });
 
-    this.network.onFire((power, angle, weaponType) => {
+    this.network.onFire((power, angle, weaponType, fuel) => {
       const activePlayer = this.getActivePlayer();
       activePlayer.aimPower = power;
       activePlayer.aimAngle = angle;
@@ -1785,8 +1833,12 @@ export class GameEngine {
       activePlayer.recoilOffset = recoilKick;
       activePlayer.recoilAngle = -0.15;
 
-      const dynamicCost = this.getDynamicFuelCost(weaponType, power);
-      activePlayer.fuel = Math.max(0, activePlayer.fuel - dynamicCost);
+      if (fuel !== undefined) {
+        activePlayer.fuel = fuel;
+      } else {
+        const dynamicCost = this.getDynamicFuelCost(weaponType, power);
+        activePlayer.fuel = Math.max(0, activePlayer.fuel - dynamicCost);
+      }
 
       this.state = 'PROJECTILE_FLIGHT';
       this.fireSingleProjectile();
@@ -1918,7 +1970,8 @@ export class GameEngine {
     if (!this.isMultiplayer) return;
     const now = Date.now();
     if (force || now - this.lastMovePublishTime > 120) {
-      this.network.sendEvent('move', { x });
+      const localPlayer = this.players[this.network.role === 'host' ? 0 : 1];
+      this.network.sendEvent('move', { x, fuel: localPlayer.fuel });
       this.lastMovePublishTime = now;
     }
   }

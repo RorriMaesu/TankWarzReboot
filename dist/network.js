@@ -33,6 +33,7 @@ export class NetworkManager {
         this.onDisconnectCallback = null;
         this.onMineSpawnCallback = null;
         this.onRematchReadyCallback = null;
+        this.onStatusSyncCallback = null;
         this.myClientId = 'client-' + Math.random().toString(36).substring(2, 11);
     }
     init(apiKey) {
@@ -88,6 +89,7 @@ export class NetworkManager {
     onGameStart(cb) { this.onGameStartCallback = cb; }
     onDisconnect(cb) { this.onDisconnectCallback = cb; }
     onMineSpawn(cb) { this.onMineSpawnCallback = cb; }
+    onStatusSync(cb) { this.onStatusSyncCallback = cb; }
     /**
      * Enters the public matchmaking queue and waits for an opponent.
      */
@@ -238,11 +240,11 @@ export class NetworkManager {
                 switch (payload.type) {
                     case 'move':
                         if (this.onMoveCallback)
-                            this.onMoveCallback(payload.data.x);
+                            this.onMoveCallback(payload.data.x, payload.data.fuel);
                         break;
                     case 'fire':
                         if (this.onFireCallback) {
-                            this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
+                            this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType, payload.data.fuel);
                         }
                         break;
                     case 'aim':
@@ -270,6 +272,11 @@ export class NetworkManager {
                     case 'rematch_ready':
                         if (this.onRematchReadyCallback)
                             this.onRematchReadyCallback();
+                        break;
+                    case 'status_sync':
+                        if (this.onStatusSyncCallback) {
+                            this.onStatusSyncCallback(payload.data.health, payload.data.fuel, payload.data.hasNuke);
+                        }
                         break;
                 }
             }

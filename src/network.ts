@@ -3,7 +3,7 @@ declare const mqtt: any;
 import { WeaponType } from './types.js';
 
 export interface GameEventPayload {
-  type: 'move' | 'fire' | 'aim' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn' | 'rematch_ready';
+  type: 'move' | 'fire' | 'aim' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn' | 'rematch_ready' | 'status_sync';
   data: any;
 }
 
@@ -35,8 +35,8 @@ export class NetworkManager {
   private onPrivateGuestJoinedCallback: (() => void) | null = null;
 
   // Callbacks registered by the game engine
-  private onMoveCallback: ((x: number) => void) | null = null;
-  private onFireCallback: ((power: number, angle: number, weaponType: WeaponType) => void) | null = null;
+  private onMoveCallback: ((x: number, fuel?: number) => void) | null = null;
+  private onFireCallback: ((power: number, angle: number, weaponType: WeaponType, fuel?: number) => void) | null = null;
   private onAimCallback: ((power: number, angle: number) => void) | null = null;
   private onWindSyncCallback: ((windX: number) => void) | null = null;
   private onCrateDropCallback: ((x: number, crateType: 'heal' | 'fuel' | 'nuke') => void) | null = null;
@@ -45,6 +45,7 @@ export class NetworkManager {
   private onDisconnectCallback: ((reason: string) => void) | null = null;
   private onMineSpawnCallback: ((x: number) => void) | null = null;
   private onRematchReadyCallback: (() => void) | null = null;
+  private onStatusSyncCallback: ((health: number, fuel: number, hasNuke: boolean) => void) | null = null;
 
   public onRematchReady(cb: () => void) { this.onRematchReadyCallback = cb; }
 
@@ -101,8 +102,8 @@ export class NetworkManager {
     });
   }
 
-  public onMove(cb: (x: number) => void) { this.onMoveCallback = cb; }
-  public onFire(cb: (power: number, angle: number, weaponType: WeaponType) => void) { this.onFireCallback = cb; }
+  public onMove(cb: (x: number, fuel?: number) => void) { this.onMoveCallback = cb; }
+  public onFire(cb: (power: number, angle: number, weaponType: WeaponType, fuel?: number) => void) { this.onFireCallback = cb; }
   public onAim(cb: (power: number, angle: number) => void) { this.onAimCallback = cb; }
   public onWindSync(cb: (windX: number) => void) { this.onWindSyncCallback = cb; }
   public onCrateDrop(cb: (x: number, crateType: 'heal' | 'fuel' | 'nuke') => void) { this.onCrateDropCallback = cb; }
@@ -110,6 +111,7 @@ export class NetworkManager {
   public onGameStart(cb: (windX: number, seed: number) => void) { this.onGameStartCallback = cb; }
   public onDisconnect(cb: (reason: string) => void) { this.onDisconnectCallback = cb; }
   public onMineSpawn(cb: (x: number) => void) { this.onMineSpawnCallback = cb; }
+  public onStatusSync(cb: (health: number, fuel: number, hasNuke: boolean) => void) { this.onStatusSyncCallback = cb; }
 
   /**
    * Enters the public matchmaking queue and waits for an opponent.
@@ -271,11 +273,11 @@ export class NetworkManager {
         }
         switch (payload.type) {
           case 'move':
-            if (this.onMoveCallback) this.onMoveCallback(payload.data.x);
+            if (this.onMoveCallback) this.onMoveCallback(payload.data.x, payload.data.fuel);
             break;
           case 'fire':
             if (this.onFireCallback) {
-              this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
+              this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType, payload.data.fuel);
             }
             break;
           case 'aim':
@@ -299,6 +301,11 @@ export class NetworkManager {
             break;
           case 'rematch_ready':
             if (this.onRematchReadyCallback) this.onRematchReadyCallback();
+            break;
+          case 'status_sync':
+            if (this.onStatusSyncCallback) {
+              this.onStatusSyncCallback(payload.data.health, payload.data.fuel, payload.data.hasNuke);
+            }
             break;
         }
       }
