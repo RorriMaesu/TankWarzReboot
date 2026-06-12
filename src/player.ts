@@ -144,20 +144,21 @@ export class Player {
     // We rotate this offset vector by groundSlopeAngle to match the visual rendering rotation.
     const baseAngle = -this.aimAngle; // aimAngle goes up (negative y), rendering rotate uses -aimAngle.
     
-    // Joint position relative to tank ground origin (0, -28)
-    const jointOffsetX = 0;
-    const jointOffsetY = -28;
+    // Barrel tip offset vector relative to the joint center (0, 0)
+    const barrelLength = Math.max(20, 50 - this.recoilOffset);
+    const localBarrelX = Math.cos(baseAngle) * barrelLength;
+    const localBarrelY = Math.sin(baseAngle) * barrelLength;
     
-    // Barrel tip relative to joint before tank slope rotation (jointOffsetX + barrelX, jointOffsetY + barrelY)
-    const localTipX = Math.cos(baseAngle) * 50;
-    const localTipY = jointOffsetY + Math.sin(baseAngle) * 50;
+    // Total tank-local coordinates of the barrel tip (relative to ground origin (0,0))
+    const tankLocalX = localBarrelX;
+    const tankLocalY = -28 + localBarrelY; // Joint is at (0, -28) relative to ground
 
-    // Apply ground slope rotation to the vector (localTipX, localTipY)
+    // Apply ground slope rotation to the tankLocal vector
     const cosS = Math.cos(this.groundSlopeAngle);
     const sinS = Math.sin(this.groundSlopeAngle);
     
-    const rotatedTipX = localTipX * cosS - localTipY * sinS;
-    const rotatedTipY = localTipX * sinS + localTipY * cosS;
+    const rotatedTipX = tankLocalX * cosS - tankLocalY * sinS;
+    const rotatedTipY = tankLocalX * sinS + tankLocalY * cosS;
 
     return {
       x: this.position.x + rotatedTipX,
