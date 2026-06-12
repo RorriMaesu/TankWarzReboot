@@ -3,7 +3,7 @@ declare const mqtt: any;
 import { WeaponType } from './types.js';
 
 export interface GameEventPayload {
-  type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn';
+  type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn' | 'rematch_ready';
   data: any;
 }
 
@@ -43,6 +43,9 @@ export class NetworkManager {
   private onGameStartCallback: ((windX: number, seed: number) => void) | null = null;
   private onDisconnectCallback: ((reason: string) => void) | null = null;
   private onMineSpawnCallback: ((x: number) => void) | null = null;
+  private onRematchReadyCallback: (() => void) | null = null;
+
+  public onRematchReady(cb: () => void) { this.onRematchReadyCallback = cb; }
 
   constructor() {
     this.myClientId = 'client-' + Math.random().toString(36).substring(2, 11);
@@ -288,6 +291,9 @@ export class NetworkManager {
           case 'turn_end':
             if (this.onTurnEndCallback) this.onTurnEndCallback();
             break;
+          case 'rematch_ready':
+            if (this.onRematchReadyCallback) this.onRematchReadyCallback();
+            break;
         }
       }
     }
@@ -348,6 +354,21 @@ export class NetworkManager {
       type,
       data
     } as MqttPayload));
+  }
+
+  public resetForRematch() {
+    this.gameStarted = false;
+  }
+
+  public startRematch(windX: number, seed: number) {
+    if (!this.client || !this.activeRoomTopic) return;
+    this.gameStarted = true;
+    this.client.publish(this.activeRoomTopic, JSON.stringify({
+      action: 'game_start',
+      clientId: this.myClientId,
+      windX,
+      seed
+    } as any));
   }
 
   /**

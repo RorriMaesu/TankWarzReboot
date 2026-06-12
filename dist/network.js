@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 export class NetworkManager {
+    onRematchReady(cb) { this.onRematchReadyCallback = cb; }
     constructor() {
         this.client = null;
         this.activeRoomCode = '';
@@ -30,6 +31,7 @@ export class NetworkManager {
         this.onGameStartCallback = null;
         this.onDisconnectCallback = null;
         this.onMineSpawnCallback = null;
+        this.onRematchReadyCallback = null;
         this.myClientId = 'client-' + Math.random().toString(36).substring(2, 11);
     }
     init(apiKey) {
@@ -259,6 +261,10 @@ export class NetworkManager {
                         if (this.onTurnEndCallback)
                             this.onTurnEndCallback();
                         break;
+                    case 'rematch_ready':
+                        if (this.onRematchReadyCallback)
+                            this.onRematchReadyCallback();
+                        break;
                 }
             }
         }
@@ -317,6 +323,20 @@ export class NetworkManager {
             clientId: this.myClientId,
             type,
             data
+        }));
+    }
+    resetForRematch() {
+        this.gameStarted = false;
+    }
+    startRematch(windX, seed) {
+        if (!this.client || !this.activeRoomTopic)
+            return;
+        this.gameStarted = true;
+        this.client.publish(this.activeRoomTopic, JSON.stringify({
+            action: 'game_start',
+            clientId: this.myClientId,
+            windX,
+            seed
         }));
     }
     /**

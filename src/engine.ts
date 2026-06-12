@@ -99,6 +99,8 @@ export class GameEngine {
   // Audio movement looping guard
   private audioMovePlaying: boolean = false;
   private playerMovedThisTurn: boolean = false;
+  private localReadyForRematch: boolean = false;
+  private remoteReadyForRematch: boolean = false;
 
   // Weapon templates
   private weapons: Record<WeaponType, Weapon> = {
@@ -238,6 +240,8 @@ export class GameEngine {
     this.aiMoveTargetX = null;
     this.state = 'PLAYER_TURN';
     this.playerMovedThisTurn = false;
+    this.localReadyForRematch = false;
+    this.remoteReadyForRematch = false;
     this.screenFlash = 0;
     this.ai.resetMemory();
 
@@ -312,7 +316,20 @@ export class GameEngine {
 
     // Restart button
     const restartBtn = document.getElementById('restart-button');
-    restartBtn?.addEventListener('click', () => this.initGame());
+    restartBtn?.addEventListener('click', () => {
+      if (this.isMultiplayer) {
+        this.localReadyForRematch = true;
+        const btn = document.getElementById('restart-button') as HTMLButtonElement;
+        if (btn) {
+          btn.innerText = "WAITING FOR OPPONENT...";
+          btn.disabled = true;
+        }
+        this.network.sendEvent('rematch_ready', {});
+        this.checkTriggerRematch();
+      } else {
+        this.initGame();
+      }
+    });
 
     // Sliders updates
     const powerSlider = document.getElementById('power-slider') as HTMLInputElement;
@@ -727,6 +744,12 @@ export class GameEngine {
       const winner = player.health > 0 ? 'player' : 'ai';
       this.uiManager.showGameOver(winner);
       this.uiManager.logMessage(`GAME OVER. ${player.health > 0 ? player.id : ai.id} IS VICTORIOUS!`);
+
+      if (this.isMultiplayer) {
+        this.network.resetForRematch();
+        this.localReadyForRematch = false;
+        this.remoteReadyForRematch = false;
+      }
     }
   }
 
@@ -1572,6 +1595,17 @@ export class GameEngine {
     this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
   }
 
+  private checkTriggerRematch() {
+    if (this.localReadyForRematch && this.remoteReadyForRematch) {
+      if (this.network.role === 'host') {
+        const initialWind = (Math.random() - 0.5) * 2.0;
+        const terrainSeed = Date.now();
+        this.initGameMultiplayer(initialWind, terrainSeed);
+        this.network.startRematch(initialWind, terrainSeed);
+      }
+    }
+  }
+
   private setupLobbyHandlers() {
     const lobbyOverlay = document.getElementById('lobby-overlay');
     const quickMatchBtn = document.getElementById('quick-match-btn');
@@ -1584,6 +1618,11 @@ export class GameEngine {
     const cancelMatchmakingBtn = document.getElementById('cancel-matchmaking-btn');
 
     this.network = new NetworkManager();
+
+    this.network.onRematchReady(() => {
+      this.remoteReadyForRematch = true;
+      this.checkTriggerRematch();
+    });
 
     this.network.onGameStart((windX, seed) => {
       this.isMultiplayer = true;

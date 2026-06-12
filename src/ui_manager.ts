@@ -152,6 +152,11 @@ export class UIManager {
         text.textContent = winner === 'player' ? 'VICTORY' : 'DEFEATED';
         text.style.color = winner === 'player' ? '#10b981' : '#ef4444';
       }
+      const restartBtn = document.getElementById('restart-button') as HTMLButtonElement;
+      if (restartBtn) {
+        restartBtn.innerText = "REDEPLOY TANK";
+        restartBtn.disabled = false;
+      }
     }
   }
 
