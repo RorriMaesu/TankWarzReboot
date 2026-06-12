@@ -293,7 +293,8 @@ export class GameEngine {
     this.uiManager.hideGameOver();
     this.uiManager.logMessage("Battle initiated. Adjust sliders and deploy fire!");
     this.updateSliderOutputs();
-
+    this.updateInputControlsAvailability();
+    
     // Show one-time touch-aim hint on mobile
     this.showTouchAimHint();
   }
@@ -540,6 +541,20 @@ export class GameEngine {
     }
   }
 
+  private updateInputControlsAvailability() {
+    const myTurn = this.isMyTurnLocal() && this.state !== 'PROJECTILE_FLIGHT' && this.state !== 'GAME_OVER';
+    
+    const powerSlider = document.getElementById('power-slider') as HTMLInputElement;
+    const angleSlider = document.getElementById('angle-slider') as HTMLInputElement;
+    const fireBtn = document.getElementById('fire-button') as HTMLButtonElement;
+    const weaponSelector = document.getElementById('weapon-selector') as HTMLSelectElement;
+
+    if (powerSlider) powerSlider.disabled = !myTurn;
+    if (angleSlider) angleSlider.disabled = !myTurn;
+    if (fireBtn) fireBtn.disabled = !myTurn;
+    if (weaponSelector) weaponSelector.disabled = !myTurn;
+  }
+
   private randomizeWind() {
     this.config.wind.x = (Math.random() - 0.5) * 2.0;
   }
@@ -583,6 +598,7 @@ export class GameEngine {
     this.burstTimer = 0;
 
     this.state = 'PROJECTILE_FLIGHT';
+    this.updateInputControlsAvailability();
     this.fireSingleProjectile();
   }
 
@@ -775,6 +791,7 @@ export class GameEngine {
 
     if (player.health <= 0 || ai.health <= 0) {
       this.state = 'GAME_OVER';
+      this.updateInputControlsAvailability();
 
       // Determine winner from the LOCAL player's perspective
       let winner: string;
@@ -1272,13 +1289,20 @@ export class GameEngine {
               }
             } else {
               this.state = 'PLAYER_TURN';
-              this.randomizeWind();
+              
+              if (!this.isMultiplayer || this.network.role === 'host') {
+                this.randomizeWind();
+                if (this.isMultiplayer) {
+                  this.network.sendEvent('wind_sync', { windX: this.config.wind.x });
+                }
+              }
               
               const p1 = this.players[0];
               this.synchronizeSliders(p1);
               
               this.uiManager.logMessage("Player 1 Turn initiated. Wind has shifted.");
             }
+            this.updateInputControlsAvailability();
           }
         }
       }
@@ -1650,6 +1674,7 @@ export class GameEngine {
 
     this.uiManager.logMessage(`REALTIME MULTIPLAYER LAUNCHED! Room Code: ${this.network.activeRoomCode}`);
     this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
+    this.updateInputControlsAvailability();
   }
 
   private checkTriggerRematch() {
@@ -1757,6 +1782,7 @@ export class GameEngine {
         this.uiManager.logMessage("Your Turn.");
       }
       this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
+      this.updateInputControlsAvailability();
     });
 
     this.network.onDisconnect((reason) => {
