@@ -464,8 +464,16 @@ export class GameEngine {
 
   private getDynamicFuelCost(weaponType: WeaponType, power: number): number {
     const baseCost = this.weapons[weaponType].fuelCost;
-    if (baseCost === 0) return 0;
-    return Math.round(baseCost * (power / 70));
+    
+    // For small_cannon, which is normally free, make high power shots consume a small amount of fuel.
+    // Otherwise, scale weapon fuel cost based on the power used: (power / 50) multiplier.
+    if (weaponType === 'small_cannon') {
+      return Math.round(power > 60 ? (power - 60) * 0.15 : 0);
+    }
+    
+    // Scale linearly: 50 power is 100% cost, 100 power is 200% cost, 20 power is 40% cost.
+    const multiplier = power / 50;
+    return Math.round(baseCost * multiplier);
   }
 
   private updateWeaponDropdownCosts(power: number) {
@@ -660,7 +668,7 @@ export class GameEngine {
     }
   }
 
-  private triggerExplosion(x: number, y: number, radius: number, damage: number, owner: 'player' | 'ai') {
+  private triggerExplosion(x: number, y: number, radius: number, damage: number, owner: 'player' | 'ai', kineticMultiplier: number = 1.0) {
     const isDirtSpreader = this.burstWeapon?.type === 'dirt_spreader';
 
     // 1. Screenshake trigger & Screen flash
@@ -737,12 +745,22 @@ export class GameEngine {
       const effectiveRadius = radius + 20; // tank width buffer
       if (dist < effectiveRadius) {
         const falloff = 1 - (dist / effectiveRadius);
-        const actualDamage = Math.round(damage * falloff);
+        
+        // Scale base damage by the kinetic multiplier (speed at impact relative to initial launch speed)
+        let actualDamage = Math.round(damage * falloff * kineticMultiplier);
         
         if (actualDamage > 0) {
           player.takeDamage(actualDamage);
-          this.createFloatingText(player.position.x, player.position.y - 40, `-${actualDamage} HP`, '#ef4444');
-          this.uiManager.logMessage(`${player.id} took ${actualDamage} splash damage.`);
+          
+          let displayMsg = `-${actualDamage} HP`;
+          if (kineticMultiplier > 1.05 && dist < 25) {
+            const pct = Math.round((kineticMultiplier - 1.0) * 100);
+            displayMsg = `-${actualDamage} HP (+${pct}% Kinetic Boost!)`;
+            this.createFloatingText(player.position.x, player.position.y - 60, `KINETIC IMPACT!`, '#f59e0b');
+          }
+          
+          this.createFloatingText(player.position.x, player.position.y - 40, displayMsg, '#ef4444');
+          this.uiManager.logMessage(`${player.id} took ${actualDamage} splash damage (Kinetic Mult: ${kineticMultiplier.toFixed(2)}x).`);
         }
       }
     });
@@ -1112,7 +1130,9 @@ export class GameEngine {
             } else {
               // Direct detonation
               p.isActive = false;
-              this.triggerExplosion(p.position.x, terrainHeight, p.radius, p.damage, p.owner);
+              const currentSpeed = Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
+              const kineticMultiplier = p.initialSpeed > 0 ? (currentSpeed / p.initialSpeed) : 1.0;
+              this.triggerExplosion(p.position.x, terrainHeight, p.radius, p.damage, p.owner, kineticMultiplier);
               break;
             }
           }
@@ -1130,7 +1150,9 @@ export class GameEngine {
             if (dist < p.projectileRadius + 18) {
               p.isActive = false;
               hitTank = true;
-              this.triggerExplosion(p.position.x, p.position.y, p.radius, p.damage, p.owner);
+              const currentSpeed = Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
+              const kineticMultiplier = p.initialSpeed > 0 ? (currentSpeed / p.initialSpeed) : 1.0;
+              this.triggerExplosion(p.position.x, p.position.y, p.radius, p.damage, p.owner, kineticMultiplier);
               break;
             }
           }

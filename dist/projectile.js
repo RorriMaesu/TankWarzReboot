@@ -4,6 +4,7 @@ export class Projectile {
         this.wasSplit = false;
         this.bouncesRemaining = 3;
         this.prevVy = -100;
+        this.initialSpeed = 0;
         this.trail = [];
         this.id = id;
         this.owner = owner;
@@ -15,6 +16,7 @@ export class Projectile {
         this.isActive = true;
         this.type = type;
         this.bouncesRemaining = type === 'bouncing_grenade' ? 3 : 0;
+        this.initialSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
     }
     addTrailPoint() {
         if (this.trail.length > 0) {

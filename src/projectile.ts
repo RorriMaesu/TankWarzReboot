@@ -18,6 +18,7 @@ export class Projectile {
   public bouncesRemaining: number = 3;
   public prevVy: number = -100;
 
+  public initialSpeed: number = 0;
   private trail: Vector2D[] = [];
 
   constructor(
@@ -40,6 +41,7 @@ export class Projectile {
     this.isActive = true;
     this.type = type;
     this.bouncesRemaining = type === 'bouncing_grenade' ? 3 : 0;
+    this.initialSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
   }
 
   public addTrailPoint() {
