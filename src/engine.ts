@@ -324,6 +324,19 @@ export class GameEngine {
   }
 
   private setupEventListeners() {
+    // Toggle system log container
+    const logHeader = document.getElementById('message-log-header');
+    const logContainer = document.getElementById('message-log-container');
+    const logIcon = document.getElementById('log-toggle-icon');
+    logHeader?.addEventListener('click', () => {
+      if (logContainer) {
+        const isCollapsed = logContainer.classList.toggle('collapsed');
+        if (logIcon) {
+          logIcon.textContent = isCollapsed ? '▲' : '▼';
+        }
+      }
+    });
+
     // Fire button
     const fireBtn = document.getElementById('fire-button');
     fireBtn?.addEventListener('click', () => this.handleFire());

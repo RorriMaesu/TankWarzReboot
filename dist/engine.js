@@ -260,6 +260,18 @@ export class GameEngine {
         this.uiManager.logMessage(`A supply drop is parachuting in containing a ${type.toUpperCase()} crate!`);
     }
     setupEventListeners() {
+        // Toggle system log container
+        const logHeader = document.getElementById('message-log-header');
+        const logContainer = document.getElementById('message-log-container');
+        const logIcon = document.getElementById('log-toggle-icon');
+        logHeader === null || logHeader === void 0 ? void 0 : logHeader.addEventListener('click', () => {
+            if (logContainer) {
+                const isCollapsed = logContainer.classList.toggle('collapsed');
+                if (logIcon) {
+                    logIcon.textContent = isCollapsed ? '▲' : '▼';
+                }
+            }
+        });
         // Fire button
         const fireBtn = document.getElementById('fire-button');
         fireBtn === null || fireBtn === void 0 ? void 0 : fireBtn.addEventListener('click', () => this.handleFire());
