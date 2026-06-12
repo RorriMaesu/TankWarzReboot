@@ -21,6 +21,8 @@ export class Player {
   public recoilOffset: number = 0;
   public recoilAngle: number = 0;
   public targetX: number | null = null;
+  private lastX: number | null = null;
+  private wheelAngle: number = 0;
 
   private static trimCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     const ctx = canvas.getContext('2d');
@@ -100,16 +102,16 @@ export class Player {
   public static loadAssets(): void {
     if (Player.assetsLoaded) return;
     Player.assetsLoaded = true;
-    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.0.9').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.0').then(canvas => {
       Player.blueChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.0.9').then(canvas => {
+    Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.0').then(canvas => {
       Player.orangeChassisCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_blue.png?v=1.0.9').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.0').then(canvas => {
       Player.blueTurretCanvas = canvas;
     });
-    Player.loadAndChromaKey('assets/turret_orange.png?v=1.0.9').then(canvas => {
+    Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.0').then(canvas => {
       Player.orangeTurretCanvas = canvas;
     });
   }
@@ -219,11 +221,16 @@ export class Player {
     ctx.roundRect(x - trackWidth / 2 - 2, y - 16, trackWidth + 4, 11, 4);
     ctx.fill();
 
-    // Draw track wheel spoke circles with dynamic rotation
+    // Draw track wheel spoke circles with dynamic rotation only when moving
     ctx.fillStyle = '#1e293b';
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 1;
-    const wheelAngle = (Date.now() * (isCurrentTurn ? 0.05 : 0.008)) % (Math.PI * 2);
+
+    if (this.lastX !== null && Math.abs(x - this.lastX) > 0.01) {
+      const direction = x > this.lastX ? 1 : -1;
+      this.wheelAngle = (this.wheelAngle + direction * 0.15) % (Math.PI * 2);
+    }
+    this.lastX = x;
 
     for (let i = -2; i <= 2; i++) {
       const wheelX = x + (i * 14); // Distributed across the track width
@@ -236,7 +243,7 @@ export class Player {
       
       // Draw spinning spoke lines
       ctx.translate(wheelX, wheelY);
-      ctx.rotate(wheelAngle + i * 0.4);
+      ctx.rotate(this.wheelAngle + i * 0.4);
       ctx.beginPath();
       ctx.moveTo(-4.5, 0);
       ctx.lineTo(4.5, 0);
