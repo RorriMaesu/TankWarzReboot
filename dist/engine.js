@@ -385,12 +385,10 @@ export class GameEngine {
         return this.state === 'PLAYER_TURN' ? this.players[0] : this.players[1];
     }
     getDynamicFuelCost(weaponType, power) {
-        const baseCost = this.weapons[weaponType].fuelCost;
-        // For small_cannon, which is normally free, make high power shots consume a small amount of fuel.
-        // Otherwise, scale weapon fuel cost based on the power used: (power / 50) multiplier.
         if (weaponType === 'small_cannon') {
-            return Math.round(power > 60 ? (power - 60) * 0.15 : 0);
+            return 0; // Small cannon is always free to avoid game soft-locks
         }
+        const baseCost = this.weapons[weaponType].fuelCost;
         // Scale linearly: 50 power is 100% cost, 100 power is 200% cost, 20 power is 40% cost.
         const multiplier = power / 50;
         return Math.round(baseCost * multiplier);
