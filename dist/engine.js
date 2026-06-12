@@ -114,9 +114,9 @@ export class GameEngine {
             nuke: {
                 type: 'nuke',
                 name: 'Tactical Nuke',
-                damage: 100,
+                damage: 200,
                 fuelCost: 35,
-                radius: 125,
+                radius: 250,
                 projectileRadius: 10,
                 speedMultiplier: 0.07,
                 burstCount: 1,
