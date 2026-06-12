@@ -63,11 +63,24 @@ export class NetworkManager {
           }
         }
 
-        this.client = new Ably.Realtime({
+        const options: any = {
           key: key,
-          clientId: this.myClientId,
-          environment: isSandbox ? 'sandbox' : undefined
-        });
+          clientId: this.myClientId
+        };
+
+        if (isSandbox) {
+          options.realtimeHost = 'sandbox-realtime.ably.io';
+          options.restHost = 'sandbox-rest.ably.io';
+          options.fallbackHosts = [
+            'sandbox-a-fallback.ably-realtime.com',
+            'sandbox-b-fallback.ably-realtime.com',
+            'sandbox-c-fallback.ably-realtime.com',
+            'sandbox-d-fallback.ably-realtime.com',
+            'sandbox-e-fallback.ably-realtime.com'
+          ];
+        }
+
+        this.client = new Ably.Realtime(options);
 
         this.client.connection.on('connected', () => {
           console.log("Connected to Ably cloud realtime network.");
