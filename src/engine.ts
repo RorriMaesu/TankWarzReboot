@@ -180,12 +180,12 @@ export class GameEngine {
 
   constructor(canvasId: string) {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = 1024;
+    canvas.height = 576;
     this.config = {
-      canvasWidth: canvas.width,
-      canvasHeight: canvas.height,
-      gravity: 0.15 * (canvas.width / 1024),
+      canvasWidth: 1024,
+      canvasHeight: 576,
+      gravity: 0.15,
       wind: { x: 0, y: 0 }
     };
 
@@ -302,19 +302,6 @@ export class GameEngine {
   }
 
   private setupEventListeners() {
-    // Resize event
-    window.addEventListener('resize', () => {
-      const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
-      if (canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        this.config.canvasWidth = canvas.width;
-        this.config.canvasHeight = canvas.height;
-        this.config.gravity = 0.15 * (canvas.width / 1024);
-        this.initGame();
-      }
-    });
-
     // Fire button
     const fireBtn = document.getElementById('fire-button');
     fireBtn?.addEventListener('click', () => this.handleFire());

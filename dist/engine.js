@@ -135,12 +135,12 @@ export class GameEngine {
             }
         };
         const canvas = document.getElementById(canvasId);
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = 1024;
+        canvas.height = 576;
         this.config = {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height,
-            gravity: 0.15 * (canvas.width / 1024),
+            canvasWidth: 1024,
+            canvasHeight: 576,
+            gravity: 0.15,
             wind: { x: 0, y: 0 }
         };
         this.renderer = new Renderer(canvasId, this.config);
@@ -241,18 +241,6 @@ export class GameEngine {
         this.uiManager.logMessage(`A supply drop is parachuting in containing a ${type.toUpperCase()} crate!`);
     }
     setupEventListeners() {
-        // Resize event
-        window.addEventListener('resize', () => {
-            const canvas = document.getElementById('gameCanvas');
-            if (canvas) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                this.config.canvasWidth = canvas.width;
-                this.config.canvasHeight = canvas.height;
-                this.config.gravity = 0.15 * (canvas.width / 1024);
-                this.initGame();
-            }
-        });
         // Fire button
         const fireBtn = document.getElementById('fire-button');
         fireBtn === null || fireBtn === void 0 ? void 0 : fireBtn.addEventListener('click', () => this.handleFire());
