@@ -26,6 +26,7 @@ export class NetworkManager {
   private matchingInitiated: boolean = false;
   private matchmakingInterval: any = null;
   private activeRoomTopic: string = '';
+  private gameStarted: boolean = false;
   
   // Track queue heartbeats: clientId -> { timestamp, lastSeen }
   private activeQueues: Map<string, { timestamp: number; lastSeen: number }> = new Map();
@@ -113,6 +114,7 @@ export class NetworkManager {
     if (!this.client) return;
     this.role = 'local';
     this.matchingInitiated = false;
+    this.gameStarted = false;
     this.onMatchStartCallback = onMatchStart;
     this.myMatchStartTime = Date.now();
     this.activeQueues.clear();
@@ -205,7 +207,7 @@ export class NetworkManager {
             // Periodically publish handshake until game starts
             let attempts = 0;
             const sendHandshake = () => {
-              if (this.role !== 'guest' || !this.client) return;
+              if (this.role !== 'guest' || !this.client || this.gameStarted) return;
               this.client.publish(this.activeRoomTopic, JSON.stringify({
                 action: 'handshake',
                 clientId: this.myClientId,
@@ -213,7 +215,7 @@ export class NetworkManager {
               } as MqttPayload));
 
               attempts++;
-              if (attempts < 10 && this.role === 'guest') {
+              if (attempts < 10 && this.role === 'guest' && !this.gameStarted) {
                 setTimeout(sendHandshake, 1000);
               }
             };
@@ -227,7 +229,8 @@ export class NetworkManager {
     // 2. Gameplay room logic
     if (topic === this.activeRoomTopic) {
       if (payload.action === 'handshake') {
-        if (this.role === 'host') {
+        if (this.role === 'host' && !this.gameStarted) {
+          this.gameStarted = true;
           console.log(`Challenger joined room: ${payload.guestId}`);
           
           if (this.onMatchStartCallback) this.onMatchStartCallback('host');
@@ -251,7 +254,8 @@ export class NetworkManager {
       }
 
       if (payload.action === 'game_start') {
-        if (this.role === 'guest' && this.onGameStartCallback) {
+        if (this.role === 'guest' && !this.gameStarted && this.onGameStartCallback) {
+          this.gameStarted = true;
           // Confirm room role changes
           this.onGameStartCallback(payload.data?.windX ?? (payload as any).windX ?? 0, payload.data?.seed ?? (payload as any).seed ?? Date.now());
         }
@@ -294,6 +298,7 @@ export class NetworkManager {
    */
   public async hostPrivateRoom(onGuestJoined: () => void): Promise<string> {
     if (!this.client) return '';
+    this.gameStarted = false;
     const code = Math.random().toString(36).substring(2, 6).toUpperCase();
     this.activeRoomCode = code;
     this.role = 'host';
@@ -309,6 +314,7 @@ export class NetworkManager {
    */
   public async joinPrivateRoom(code: string): Promise<boolean> {
     if (!this.client) return false;
+    this.gameStarted = false;
     const cleanCode = code.toUpperCase();
     this.activeRoomCode = cleanCode;
     this.role = 'guest';
@@ -366,5 +372,6 @@ export class NetworkManager {
     this.activeRoomTopic = '';
     this.role = 'local';
     this.matchingInitiated = false;
+    this.gameStarted = false;
   }
 }
