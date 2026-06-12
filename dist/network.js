@@ -136,6 +136,7 @@ export class NetworkManager {
                     // We are the Host. Broadcast match agreement.
                     this.client.publish(queueTopic, JSON.stringify({
                         action: 'match',
+                        clientId: this.myClientId,
                         hostId: host.clientId,
                         guestId: guest.clientId
                     }));
@@ -145,6 +146,10 @@ export class NetworkManager {
     }
     handleMqttMessage(topic, payload) {
         var _a, _b, _c, _d, _e, _f;
+        // Ignore messages published by ourselves to prevent echo-loop tank snapping glitches
+        if (payload.clientId === this.myClientId) {
+            return;
+        }
         // 1. Queue logic
         if (topic === 'tankwarz/reboot/lobby/queue') {
             if (this.matchingInitiated)
@@ -180,6 +185,7 @@ export class NetworkManager {
                                 return;
                             this.client.publish(this.activeRoomTopic, JSON.stringify({
                                 action: 'handshake',
+                                clientId: this.myClientId,
                                 guestId: this.myClientId
                             }));
                             attempts++;
@@ -207,6 +213,7 @@ export class NetworkManager {
                     const terrainSeed = Date.now();
                     this.client.publish(this.activeRoomTopic, JSON.stringify({
                         action: 'game_start',
+                        clientId: this.myClientId,
                         windX: initialWind,
                         seed: terrainSeed
                     }));
@@ -286,6 +293,7 @@ export class NetworkManager {
                 if (this.client) {
                     this.client.publish(this.activeRoomTopic, JSON.stringify({
                         action: 'handshake',
+                        clientId: this.myClientId,
                         guestId: this.myClientId
                     }));
                 }
@@ -301,6 +309,7 @@ export class NetworkManager {
             return;
         this.client.publish(this.activeRoomTopic, JSON.stringify({
             action: 'game_event',
+            clientId: this.myClientId,
             type,
             data
         }));

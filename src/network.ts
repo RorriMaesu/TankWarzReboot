@@ -163,6 +163,7 @@ export class NetworkManager {
         // We are the Host. Broadcast match agreement.
         this.client.publish(queueTopic, JSON.stringify({
           action: 'match',
+          clientId: this.myClientId,
           hostId: host.clientId,
           guestId: guest.clientId
         } as MqttPayload));
@@ -171,6 +172,11 @@ export class NetworkManager {
   }
 
   private handleMqttMessage(topic: string, payload: MqttPayload) {
+    // Ignore messages published by ourselves to prevent echo-loop tank snapping glitches
+    if (payload.clientId === this.myClientId) {
+      return;
+    }
+
     // 1. Queue logic
     if (topic === 'tankwarz/reboot/lobby/queue') {
       if (this.matchingInitiated) return;
@@ -207,6 +213,7 @@ export class NetworkManager {
               if (this.role !== 'guest' || !this.client) return;
               this.client.publish(this.activeRoomTopic, JSON.stringify({
                 action: 'handshake',
+                clientId: this.myClientId,
                 guestId: this.myClientId
               } as MqttPayload));
 
@@ -237,6 +244,7 @@ export class NetworkManager {
 
           this.client.publish(this.activeRoomTopic, JSON.stringify({
             action: 'game_start',
+            clientId: this.myClientId,
             windX: initialWind,
             seed: terrainSeed
           } as any));
@@ -315,6 +323,7 @@ export class NetworkManager {
       if (this.client) {
         this.client.publish(this.activeRoomTopic, JSON.stringify({
           action: 'handshake',
+          clientId: this.myClientId,
           guestId: this.myClientId
         } as MqttPayload));
       }
@@ -331,6 +340,7 @@ export class NetworkManager {
     
     this.client.publish(this.activeRoomTopic, JSON.stringify({
       action: 'game_event',
+      clientId: this.myClientId,
       type,
       data
     } as MqttPayload));
