@@ -67,6 +67,7 @@ export class GameEngine {
   private network!: NetworkManager;
   private isMultiplayer: boolean = false;
   private isDraggingAim: boolean = false;
+  private lastMovePublishTime: number = 0;
   
   private aiTurnStartTime: number | null = null;
   private difficulty: 'easy' | 'medium' | 'expert' = 'medium';
@@ -386,9 +387,7 @@ export class GameEngine {
           player.fuel = Math.max(0, player.fuel - fuelCost);
           this.playerMovedThisTurn = true;
           player.update(this.terrain);
-          if (this.isMultiplayer) {
-            this.network.sendEvent('move', { x: player.position.x });
-          }
+          this.sendMoveEventThrottled(player.position.x);
         }
       } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
         const maxBound = player.type === 'player' ? this.config.canvasWidth / 2 - 50 : this.config.canvasWidth - 25;
@@ -398,9 +397,7 @@ export class GameEngine {
           player.fuel = Math.max(0, player.fuel - fuelCost);
           this.playerMovedThisTurn = true;
           player.update(this.terrain);
-          if (this.isMultiplayer) {
-            this.network.sendEvent('move', { x: player.position.x });
-          }
+          this.sendMoveEventThrottled(player.position.x);
         }
       }
     });
@@ -409,6 +406,12 @@ export class GameEngine {
       if (['a', 'A', 'd', 'D', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         this.audio.stopMove();
         this.audioMovePlaying = false;
+        if (this.isMultiplayer) {
+          const player = this.getActivePlayer();
+          if (player) {
+            this.sendMoveEventThrottled(player.position.x, true); // force final sync
+          }
+        }
       }
     });
 
@@ -1720,6 +1723,15 @@ export class GameEngine {
     });
   }
 
+  private sendMoveEventThrottled(x: number, force: boolean = false) {
+    if (!this.isMultiplayer) return;
+    const now = Date.now();
+    if (force || now - this.lastMovePublishTime > 120) {
+      this.network.sendEvent('move', { x });
+      this.lastMovePublishTime = now;
+    }
+  }
+
   private setupTouchControls() {
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     if (!canvas) return;
@@ -1816,9 +1828,7 @@ export class GameEngine {
             player.fuel = Math.max(0, player.fuel - fuelCost);
             this.playerMovedThisTurn = true;
             player.update(this.terrain);
-            if (this.isMultiplayer) {
-              this.network.sendEvent('move', { x: player.position.x });
-            }
+            this.sendMoveEventThrottled(player.position.x);
           }
         } else {
           const maxBound = player.type === 'player' ? this.config.canvasWidth / 2 - 50 : this.config.canvasWidth - 25;
@@ -1828,9 +1838,7 @@ export class GameEngine {
             player.fuel = Math.max(0, player.fuel - fuelCost);
             this.playerMovedThisTurn = true;
             player.update(this.terrain);
-            if (this.isMultiplayer) {
-              this.network.sendEvent('move', { x: player.position.x });
-            }
+            this.sendMoveEventThrottled(player.position.x);
           }
         }
         this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
@@ -1847,6 +1855,12 @@ export class GameEngine {
       }
       this.audio.stopMove();
       this.audioMovePlaying = false;
+      if (this.isMultiplayer) {
+        const player = this.getActivePlayer();
+        if (player) {
+          this.sendMoveEventThrottled(player.position.x, true); // force final sync
+        }
+      }
     };
 
     leftBtn?.addEventListener('touchstart', (e) => { e.preventDefault(); startDriving('left'); });

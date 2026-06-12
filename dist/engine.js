@@ -30,6 +30,7 @@ export class GameEngine {
         this.mines = [];
         this.isMultiplayer = false;
         this.isDraggingAim = false;
+        this.lastMovePublishTime = 0;
         this.aiTurnStartTime = null;
         this.difficulty = 'medium';
         this.gameMode = 'vs_ai';
@@ -313,9 +314,7 @@ export class GameEngine {
                     player.fuel = Math.max(0, player.fuel - fuelCost);
                     this.playerMovedThisTurn = true;
                     player.update(this.terrain);
-                    if (this.isMultiplayer) {
-                        this.network.sendEvent('move', { x: player.position.x });
-                    }
+                    this.sendMoveEventThrottled(player.position.x);
                 }
             }
             else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
@@ -326,9 +325,7 @@ export class GameEngine {
                     player.fuel = Math.max(0, player.fuel - fuelCost);
                     this.playerMovedThisTurn = true;
                     player.update(this.terrain);
-                    if (this.isMultiplayer) {
-                        this.network.sendEvent('move', { x: player.position.x });
-                    }
+                    this.sendMoveEventThrottled(player.position.x);
                 }
             }
         });
@@ -336,6 +333,12 @@ export class GameEngine {
             if (['a', 'A', 'd', 'D', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 this.audio.stopMove();
                 this.audioMovePlaying = false;
+                if (this.isMultiplayer) {
+                    const player = this.getActivePlayer();
+                    if (player) {
+                        this.sendMoveEventThrottled(player.position.x, true); // force final sync
+                    }
+                }
             }
         });
         const startMusicOnInteraction = () => {
@@ -1477,6 +1480,15 @@ export class GameEngine {
             lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.add('hidden');
         });
     }
+    sendMoveEventThrottled(x, force = false) {
+        if (!this.isMultiplayer)
+            return;
+        const now = Date.now();
+        if (force || now - this.lastMovePublishTime > 120) {
+            this.network.sendEvent('move', { x });
+            this.lastMovePublishTime = now;
+        }
+    }
     setupTouchControls() {
         const canvas = document.getElementById('gameCanvas');
         if (!canvas)
@@ -1564,9 +1576,7 @@ export class GameEngine {
                         player.fuel = Math.max(0, player.fuel - fuelCost);
                         this.playerMovedThisTurn = true;
                         player.update(this.terrain);
-                        if (this.isMultiplayer) {
-                            this.network.sendEvent('move', { x: player.position.x });
-                        }
+                        this.sendMoveEventThrottled(player.position.x);
                     }
                 }
                 else {
@@ -1577,9 +1587,7 @@ export class GameEngine {
                         player.fuel = Math.max(0, player.fuel - fuelCost);
                         this.playerMovedThisTurn = true;
                         player.update(this.terrain);
-                        if (this.isMultiplayer) {
-                            this.network.sendEvent('move', { x: player.position.x });
-                        }
+                        this.sendMoveEventThrottled(player.position.x);
                     }
                 }
                 this.uiManager.updateUI(this.players, this.state, this.config.wind, this.gameMode);
@@ -1594,6 +1602,12 @@ export class GameEngine {
             }
             this.audio.stopMove();
             this.audioMovePlaying = false;
+            if (this.isMultiplayer) {
+                const player = this.getActivePlayer();
+                if (player) {
+                    this.sendMoveEventThrottled(player.position.x, true); // force final sync
+                }
+            }
         };
         leftBtn === null || leftBtn === void 0 ? void 0 : leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startDriving('left'); });
         leftBtn === null || leftBtn === void 0 ? void 0 : leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopDriving(); });
