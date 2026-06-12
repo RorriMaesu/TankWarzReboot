@@ -184,8 +184,8 @@ export class Player {
         }
     }
     draw(ctx, isCurrentTurn) {
-        // Proportions: Tracks are scaled up (width 68, height 9), Chassis is doubled in size (width 80, height 32)
-        const trackWidth = 68; // Balanced with 80px body width
+        // Proportions: Tracks are scaled up (width 74, height 9.5), Chassis is doubled in size (width 80, height 32)
+        const trackWidth = 74; // Balanced with 80px body width
         const bodyWidth = 80;
         const x = this.position.x;
         const y = this.position.y;
@@ -227,13 +227,14 @@ export class Player {
             ctx.fill();
         }
         // 2. Draw Wheels / Tracks on top of Chassis bottom to cover static treads in the image
-        // Sized down slightly (width: 68px, height: 9px) to fit snuggly under the 80px chassis
-        ctx.fillStyle = '#334155'; // Dark slate grey
+        // Sized to exactly match the length of the 80px tank chassis (trackWidth: 74px, height: 9.5px)
+        // Sits flush at the bottom (y-9.5 to y) covering the static treads of the chassis image
+        ctx.fillStyle = '#1e293b'; // Treads core outer color (Dark charcoal)
         ctx.beginPath();
-        ctx.roundRect(x - trackWidth / 2, y - 11, trackWidth, 9, 3);
+        ctx.roundRect(x - trackWidth / 2, y - 9.5, trackWidth, 9.5, 3);
         ctx.fill();
         // Draw track wheel spoke circles with dynamic rotation only when moving
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = '#334155'; // Wheel metal color
         ctx.strokeStyle = '#64748b';
         ctx.lineWidth = 1;
         if (this.lastX !== null && Math.abs(x - this.lastX) > 0.01) {
@@ -242,9 +243,9 @@ export class Player {
         }
         this.lastX = x;
         for (let i = -2; i <= 2; i++) {
-            const wheelX = x + (i * 13); // Distributed across the tighter track width
-            const wheelY = y - 6.5; // Raised slightly to sit centered inside the 9px tall track
-            const r = 3.2; // Slightly smaller wheel radius (from 4.5 to 3.2)
+            const wheelX = x + (i * 14.5); // Distributed evenly across the 74px tracks width
+            const wheelY = y - 4.8; // Centered vertically inside the 9.5px tall track
+            const r = 3.6; // Perfect radius fit
             ctx.save();
             ctx.beginPath();
             ctx.arc(wheelX, wheelY, r, 0, Math.PI * 2);
