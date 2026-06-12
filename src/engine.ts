@@ -749,8 +749,23 @@ export class GameEngine {
   }
 
   private updatePhysics() {
-    // 1. Update players physics (tanks falling)
-    this.players.forEach(p => p.update(this.terrain));
+    // 1. Update players physics (tanks falling & remote position interpolation)
+    this.players.forEach(p => {
+      if (this.isMultiplayer && p.targetX !== null) {
+        const isRemote = (this.network.role === 'host' && p.type === 'ai') || 
+                         (this.network.role === 'guest' && p.type === 'player');
+        if (isRemote) {
+          const dx = p.targetX - p.position.x;
+          if (Math.abs(dx) > 0.05) {
+            p.position.x += dx * 0.22; // glide smoothly towards targetX (22% per 60Hz step)
+          } else {
+            p.position.x = p.targetX;
+            p.targetX = null;
+          }
+        }
+      }
+      p.update(this.terrain);
+    });
 
     // 2. Animate AI tactical movement if active
     if (this.state === 'ENEMY_TURN' && this.gameMode === 'vs_ai' && this.aiMoveTargetX !== null) {
@@ -1582,8 +1597,9 @@ export class GameEngine {
 
     this.network.onMove((x) => {
       const activePlayer = this.getActivePlayer();
-      activePlayer.position.x = x;
-      activePlayer.update(this.terrain);
+      if (activePlayer) {
+        activePlayer.targetX = x;
+      }
     });
 
     this.network.onFire((power, angle, weaponType) => {

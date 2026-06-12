@@ -3,6 +3,7 @@ export class Player {
         this.aimPower = 50;
         this.recoilOffset = 0;
         this.recoilAngle = 0;
+        this.targetX = null;
         this.id = id;
         this.type = type;
         this.position = position;

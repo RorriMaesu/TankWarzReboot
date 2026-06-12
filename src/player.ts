@@ -14,6 +14,7 @@ export class Player {
   public aimPower: number = 50;
   public recoilOffset: number = 0;
   public recoilAngle: number = 0;
+  public targetX: number | null = null;
 
   constructor(id: string, type: 'player' | 'ai', position: Vector2D, health: number, fuel: number) {
     this.id = id;
