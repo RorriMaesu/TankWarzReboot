@@ -146,10 +146,6 @@ export class NetworkManager {
     }
     handleMqttMessage(topic, payload) {
         var _a, _b, _c, _d, _e, _f;
-        // Ignore messages published by ourselves to prevent echo-loop tank snapping glitches
-        if (payload.clientId === this.myClientId) {
-            return;
-        }
         // 1. Queue logic
         if (topic === 'tankwarz/reboot/lobby/queue') {
             if (this.matchingInitiated)
@@ -229,6 +225,9 @@ export class NetworkManager {
                 }
             }
             if (payload.action === 'game_event') {
+                if (payload.clientId === this.myClientId) {
+                    return;
+                }
                 switch (payload.type) {
                     case 'move':
                         if (this.onMoveCallback)
