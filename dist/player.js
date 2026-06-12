@@ -1,9 +1,61 @@
 export class Player {
+    static loadAndChromaKey(src) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imgData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        // Key out solid black background from generated sprite sheets
+                        if (r < 20 && g < 20 && b < 20) {
+                            data[i + 3] = 0; // Transparent
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                }
+                resolve(canvas);
+            };
+            img.onerror = () => {
+                const canvas = document.createElement('canvas');
+                resolve(canvas);
+            };
+        });
+    }
+    static loadAssets() {
+        if (Player.assetsLoaded)
+            return;
+        Player.assetsLoaded = true;
+        Player.loadAndChromaKey('assets/chassis_blue.png').then(canvas => {
+            Player.blueChassisCanvas = canvas;
+        });
+        Player.loadAndChromaKey('assets/chassis_orange.png').then(canvas => {
+            Player.orangeChassisCanvas = canvas;
+        });
+        Player.loadAndChromaKey('assets/turret_blue.png').then(canvas => {
+            Player.blueTurretCanvas = canvas;
+        });
+        Player.loadAndChromaKey('assets/turret_orange.png').then(canvas => {
+            Player.orangeTurretCanvas = canvas;
+        });
+    }
     constructor(id, type, position, health, fuel) {
         this.aimPower = 50;
         this.recoilOffset = 0;
         this.recoilAngle = 0;
         this.targetX = null;
+        if (!Player.assetsLoaded) {
+            Player.loadAssets();
+        }
         this.id = id;
         this.type = type;
         this.position = position;
@@ -92,32 +144,55 @@ export class Player {
         ctx.rotate(this.recoilAngle);
         ctx.translate(-x, -y);
         // 2. Draw Chassis (Tank Body)
-        ctx.fillStyle = mainColor;
-        ctx.beginPath();
-        ctx.roundRect(x - width / 2, y - 14, width, 9, 4);
-        ctx.fill();
-        // Tank cabin/turret base
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.arc(x, y - 13, 8, Math.PI, 0);
-        ctx.fill();
+        const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
+        if (chassisImg && chassisImg.width > 0) {
+            // Draw chassis image centered. Scaled to width and height.
+            ctx.drawImage(chassisImg, x - width / 2, y - 15, width, 15);
+        }
+        else {
+            ctx.fillStyle = mainColor;
+            ctx.beginPath();
+            ctx.roundRect(x - width / 2, y - 14, width, 9, 4);
+            ctx.fill();
+            // Tank cabin/turret base
+            ctx.fillStyle = secondaryColor;
+            ctx.beginPath();
+            ctx.arc(x, y - 13, 8, Math.PI, 0);
+            ctx.fill();
+        }
         // 3. Draw Rotatable Turret Barrel (retracts based on recoilOffset)
-        ctx.strokeStyle = '#64748b'; // Metallic grey
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x, y - 15);
-        // Shorten barrel vector temporarily to simulate recoil kickback sliding
-        const finalBarrelLength = Math.max(8, 22 - this.recoilOffset);
-        const barrelX = x + Math.cos(this.aimAngle) * finalBarrelLength;
-        const barrelY = (y - 15) - Math.sin(this.aimAngle) * finalBarrelLength;
-        ctx.lineTo(barrelX, barrelY);
-        ctx.stroke();
-        // Muzzle brake
-        ctx.fillStyle = '#475569';
-        ctx.beginPath();
-        ctx.arc(barrelX, barrelY, 3.5, 0, Math.PI * 2);
-        ctx.fill();
+        const turretImg = this.type === 'player' ? Player.blueTurretCanvas : Player.orangeTurretCanvas;
+        if (turretImg && turretImg.width > 0) {
+            ctx.save();
+            // Translate to the turret rotation joint position (centered on chassis)
+            ctx.translate(x, y - 13);
+            // Rotate by the aim angle. Note that aimAngle is in radians pointing upwards/left,
+            // and our sprite points straight right (0 degrees).
+            // Canvas coordinates are y-down, so we rotate by -aimAngle.
+            ctx.rotate(-this.aimAngle);
+            const finalBarrelLength = Math.max(8, 22 - this.recoilOffset);
+            // Draw the gun barrel (scaled height: 8px to keep fine details visible)
+            ctx.drawImage(turretImg, 0, -4, finalBarrelLength, 8);
+            ctx.restore();
+        }
+        else {
+            ctx.strokeStyle = '#64748b'; // Metallic grey
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y - 15);
+            // Shorten barrel vector temporarily to simulate recoil kickback sliding
+            const finalBarrelLength = Math.max(8, 22 - this.recoilOffset);
+            const barrelX = x + Math.cos(this.aimAngle) * finalBarrelLength;
+            const barrelY = (y - 15) - Math.sin(this.aimAngle) * finalBarrelLength;
+            ctx.lineTo(barrelX, barrelY);
+            ctx.stroke();
+            // Muzzle brake
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.arc(barrelX, barrelY, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore(); // restore recoil and bobbing space
         // 4. Draw engine exhaust glow (bobs with chassis)
         const exhaustX = this.type === 'player' ? x - 19 : x + 19;
@@ -184,4 +259,9 @@ export class Player {
         ctx.restore();
     }
 }
+Player.assetsLoaded = false;
+Player.blueChassisCanvas = null;
+Player.orangeChassisCanvas = null;
+Player.blueTurretCanvas = null;
+Player.orangeTurretCanvas = null;
 //# sourceMappingURL=player.js.map
