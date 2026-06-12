@@ -732,6 +732,24 @@ export class GameEngine {
       }
     }
 
+    // 6b. Check supply crates caught in the explosion blast radius
+    for (let i = this.crates.length - 1; i >= 0; i--) {
+      const crate = this.crates[i];
+      if (!crate.isActive) continue;
+
+      const dist = Math.sqrt(
+        Math.pow(crate.position.x - x, 2) +
+        Math.pow(crate.position.y - y, 2)
+      );
+
+      if (dist < radius) {
+        crate.isActive = false;
+        this.createFloatingText(crate.position.x, crate.position.y - 15, `CRATE DESTROYED!`, '#94a3b8');
+        this.uiManager.logMessage(`A supply crate was destroyed in the blast.`);
+        this.crates.splice(i, 1);
+      }
+    }
+
     this.checkGameOver();
   }
 
@@ -843,15 +861,20 @@ export class GameEngine {
       const crate = this.crates[i];
       if (!crate.isActive) continue;
 
-      // Drop update
-      if (crate.velocity.y > 0) {
-        crate.position.y += crate.velocity.y;
-        
-        const groundHeight = this.terrain.getHeight(crate.position.x);
-        if (crate.position.y >= groundHeight - 10) {
-          crate.position.y = groundHeight - 10;
-          crate.velocity.y = 0; // landed
+      const groundHeight = this.terrain.getHeight(crate.position.x);
+      const targetY = groundHeight - 10;
+
+      // Fall update: pulled down if above target ground position (airborne or terrain destroyed underneath)
+      if (crate.position.y < targetY) {
+        if (crate.velocity.y === 0) {
+          crate.velocity.y = 2.0; // initial falling speed
+        } else {
+          crate.velocity.y = Math.min(6.0, crate.velocity.y + 0.18); // accelerate downwards
         }
+        crate.position.y = Math.min(targetY, crate.position.y + crate.velocity.y);
+      } else {
+        crate.position.y = targetY;
+        crate.velocity.y = 0; // landed
       }
 
       // Check pickup bounds with player tanks

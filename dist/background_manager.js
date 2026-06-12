@@ -20,7 +20,7 @@ export class BackgroundManager {
         console.log("BackgroundManager: Initiating image loads...");
         // Load Sky Layer
         this.skyImg = new Image();
-        this.skyImg.src = 'assets/sky.png?v=1.1.8';
+        this.skyImg.src = 'assets/sky.png?v=1.1.9';
         this.skyImg.onload = () => {
             console.log("BackgroundManager: sky.png loaded successfully");
             this.assetsLoaded.sky = true;
@@ -31,7 +31,7 @@ export class BackgroundManager {
         };
         // Load Distant Skyline
         this.distantImg = new Image();
-        this.distantImg.src = 'assets/distant_ruins.png?v=1.1.8';
+        this.distantImg.src = 'assets/distant_ruins.png?v=1.1.9';
         this.distantImg.onload = () => {
             console.log("BackgroundManager: distant_ruins.png loaded successfully");
             this.assetsLoaded.distant = true;
@@ -42,7 +42,7 @@ export class BackgroundManager {
         };
         // Load Near Skyline
         this.nearImg = new Image();
-        this.nearImg.src = 'assets/near_ruins.png?v=1.1.8';
+        this.nearImg.src = 'assets/near_ruins.png?v=1.1.9';
         this.nearImg.onload = () => {
             console.log("BackgroundManager: near_ruins.png loaded successfully");
             this.assetsLoaded.near = true;
