@@ -166,7 +166,7 @@ export class BackgroundManager {
         const distParallax = cameraOffsetX * 0.1;
         if (this.assetsLoaded.distant && this.distantImg) {
             // Tiled distant skyline image at the bottom of the canvas
-            this.drawTiledImage(ctx, this.distantImg, distParallax, h - 280, 280);
+            this.drawTiledImage(ctx, this.distantImg, distParallax, h - 450, 450);
         }
         else {
             // Programmatic Distant Skyline fallback
@@ -188,7 +188,7 @@ export class BackgroundManager {
         const nearParallax = cameraOffsetX * 0.22;
         if (this.assetsLoaded.near && this.nearImg) {
             // Tiled near ruins image
-            this.drawTiledImage(ctx, this.nearImg, nearParallax, h - 340, 340);
+            this.drawTiledImage(ctx, this.nearImg, nearParallax, h - 500, 500);
         }
         else {
             // Programmatic Near Skyline fallback
