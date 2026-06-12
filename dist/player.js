@@ -195,7 +195,10 @@ export class Player {
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
         if (chassisImg && chassisImg.width > 0) {
             // Draw chassis image centered, sitting on top of the tracks (y-42 to y-10, height 32)
+            ctx.save();
+            ctx.imageSmoothingEnabled = false; // Force sharp pixelated scaling for pixel-art clarity
             ctx.drawImage(chassisImg, x - bodyWidth / 2, y - 42, bodyWidth, 32);
+            ctx.restore();
         }
         else {
             ctx.fillStyle = mainColor;
@@ -218,6 +221,7 @@ export class Player {
             ctx.rotate(-this.aimAngle);
             const finalBarrelLength = Math.max(20, 50 - this.recoilOffset);
             // Draw the gun barrel (scaled thickness: 20px to match massive body)
+            ctx.imageSmoothingEnabled = false; // Force sharp pixelated scaling for pixel-art clarity
             ctx.drawImage(turretImg, 0, -10, finalBarrelLength, 20);
             ctx.restore();
         }
