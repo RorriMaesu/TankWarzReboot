@@ -17,21 +17,40 @@ export class BackgroundManager {
         this.loadImages();
     }
     loadImages() {
+        console.log("BackgroundManager: Initiating image loads...");
         // Load Sky Layer
         this.skyImg = new Image();
         this.skyImg.src = 'assets/sky.png?v=1.1.7';
-        this.skyImg.onload = () => { this.assetsLoaded.sky = true; };
-        this.skyImg.onerror = () => { this.skyImg = null; };
+        this.skyImg.onload = () => {
+            console.log("BackgroundManager: sky.png loaded successfully");
+            this.assetsLoaded.sky = true;
+        };
+        this.skyImg.onerror = (e) => {
+            console.error("BackgroundManager: sky.png failed to load", e);
+            this.skyImg = null;
+        };
         // Load Distant Skyline
         this.distantImg = new Image();
         this.distantImg.src = 'assets/distant_ruins.png?v=1.1.7';
-        this.distantImg.onload = () => { this.assetsLoaded.distant = true; };
-        this.distantImg.onerror = () => { this.distantImg = null; };
+        this.distantImg.onload = () => {
+            console.log("BackgroundManager: distant_ruins.png loaded successfully");
+            this.assetsLoaded.distant = true;
+        };
+        this.distantImg.onerror = (e) => {
+            console.error("BackgroundManager: distant_ruins.png failed to load", e);
+            this.distantImg = null;
+        };
         // Load Near Skyline
         this.nearImg = new Image();
         this.nearImg.src = 'assets/near_ruins.png?v=1.1.7';
-        this.nearImg.onload = () => { this.assetsLoaded.near = true; };
-        this.nearImg.onerror = () => { this.nearImg = null; };
+        this.nearImg.onload = () => {
+            console.log("BackgroundManager: near_ruins.png loaded successfully");
+            this.assetsLoaded.near = true;
+        };
+        this.nearImg.onerror = (e) => {
+            console.error("BackgroundManager: near_ruins.png failed to load", e);
+            this.nearImg = null;
+        };
     }
     initBuildings() {
         let currentX = -50;
