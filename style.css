@@ -855,50 +855,104 @@ button:not(#fire-button):active {
     }
 }
 
-/* ── RESPONSIVE MOBILE STYLING ──────────────────────────── */
-@media (max-width: 768px) {
+/* ── RESPONSIVE MOBILE STYLING (OPTIMIZED FOR LANDSCAPE) ── */
+@media (max-width: 1024px) {
+    /* Top HUD Optimization */
     #hud {
-        padding: 6px 10px;
+        padding: 4px 10px;
         gap: 6px;
     }
     
     .hud-panel {
-        padding: 6px 10px;
+        padding: 4px 8px;
+    }
+    
+    .hud-panel .label {
+        font-size: 0.55rem;
+        margin-bottom: 2px;
+    }
+    
+    .stats-row {
+        gap: 10px;
+        font-size: 0.8rem;
+    }
+    
+    .stat-bars {
+        gap: 2px;
+        margin-top: 4px;
     }
     
     .bar-track {
-        width: 90px;
+        width: 75px;
+        height: 3px;
     }
     
     #turn-indicator {
-        font-size: 0.85rem;
-        padding: 6px 12px;
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 6px;
     }
     
+    #wind-indicator {
+        min-width: 90px;
+    }
+    
+    #wind-indicator .label {
+        font-size: 0.55rem;
+        margin-bottom: 2px;
+    }
+    
+    .wind-row {
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+    
+    #wind-direction-arrow {
+        font-size: 1rem;
+    }
+
+    /* Bottom Panel Floating Command Deck */
     #bottom-panel {
         padding: 0;
     }
     
+    #bottom-panel::before {
+        display: none; /* Hide the separator line to save space */
+    }
+    
     #message-log {
-        display: none; /* Hide log to save screen space */
+        display: none; /* Hide message log */
     }
     
     #controls {
-        flex-direction: column;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 8px;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 12px 4px 135px; /* Reserve left side for D-pad */
+        height: 50px;
+        box-sizing: border-box;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
     
     .controls-left {
-        flex-direction: column;
+        flex-direction: row;
+        align-items: center;
         gap: 8px;
-        width: 100%;
+        width: auto;
+        flex-grow: 1;
     }
     
     .control-row {
         width: 100%;
-        justify-content: space-between;
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
     }
     
     .control-row--settings {
@@ -906,16 +960,183 @@ button:not(#fire-button):active {
     }
     
     .control-group {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        height: 38px;
+        box-sizing: border-box;
+        margin: 0;
         flex: 1;
     }
     
-    #fire-button {
-        width: 100%;
-        height: 40px;
-        font-size: 1.1rem;
+    .control-group:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+    
+    .control-group--wide {
+        flex: 1.2;
+    }
+    
+    .control-group .label {
+        margin-bottom: 0;
+        font-size: 0.6rem;
+        white-space: nowrap;
+    }
+    
+    select {
+        padding: 3px 6px;
+        font-size: 0.75rem;
+        height: 28px;
+        border-radius: 6px;
+        background: #1e293b;
+    }
+    
+    /* Range Sliders Optimization */
+    .slider-header {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 1px;
+        min-width: 45px;
+    }
+    
+    .slider-value {
+        font-size: 0.72rem;
+    }
+    
+    .slider-wrap {
+        flex-grow: 1;
+        gap: 0;
+    }
+    
+    .slider-hint {
+        display: none !important; /* Hide hints to maximize slider touch area */
+    }
+    
+    input[type="range"] {
+        height: 4px;
+    }
+    
+    /* Fire Button (Circular Floating Design) */
+    button#fire-button {
+        width: 52px;
+        height: 52px;
+        min-width: 52px;
+        border-radius: 50%;
+        font-size: 0.82rem;
+        padding: 0;
+        margin: 0;
+        align-self: center;
+        border: 2px solid rgba(251, 191, 36, 0.5);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.45);
+    }
+    
+    button#fire-button:hover {
+        transform: scale(1.05);
+    }
+    
+    button#fire-button:active {
+        transform: scale(0.92);
     }
 
+    /* D-pad Driving Controls */
     #mobile-dpad {
         display: flex !important;
+        bottom: 6px;
+        left: 12px;
+        gap: 10px;
+        z-index: 1000;
+    }
+    
+    .dpad-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+        border: 1.5px solid rgba(59, 130, 246, 0.35);
+        color: #3b82f6;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), inset 0 0 8px rgba(59, 130, 246, 0.1);
+    }
+    
+    .dpad-btn:active {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: #3b82f6;
+        color: #ffffff;
+        transform: scale(0.92) translateY(1px);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+
+    /* Lobby Overlay Mobile Scaling */
+    #lobby-overlay {
+        padding: 10px;
+    }
+    
+    .lobby-card {
+        padding: 16px 20px;
+        width: 100%;
+        max-width: 380px;
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+    
+    .lobby-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .lobby-header .subtitle {
+        margin: 2px 0 14px 0;
+        font-size: 0.75rem;
+    }
+    
+    .lobby-separator {
+        margin: 8px 0;
+        font-size: 0.65rem;
+    }
+    
+    .lobby-btn {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .join-row {
+        gap: 6px;
+    }
+    
+    #room-input {
+        padding: 8px;
+        font-size: 0.95rem;
+    }
+    
+    .lobby-btn.join {
+        width: 70px;
+    }
+
+    /* Game Over Screen Mobile Scaling */
+    .game-over-content {
+        padding: 20px 30px;
+        max-width: 320px;
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+    
+    .game-over-content h1 {
+        font-size: 2rem;
+    }
+    
+    .game-over-content p {
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+    }
+    
+    button:not(#fire-button) {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        border-radius: 8px;
     }
 }
