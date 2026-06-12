@@ -35,7 +35,7 @@ export class NetworkManager {
                     return;
                 }
                 let key = apiKey;
-                const isSandbox = !key;
+                let isSandbox = !key;
                 if (isSandbox) {
                     try {
                         console.log("No API key provided. Provisioning temporary sandbox key...");
@@ -58,11 +58,16 @@ export class NetworkManager {
                         return;
                     }
                 }
+                // Re-evaluate sandbox flag based on the actual key
+                const isSandboxKey = key && key.includes('_tmp_');
+                console.log(isSandboxKey
+                    ? "Connecting in Isolated Sandbox Mode (Local Tabs Only)"
+                    : "Connecting in Cloud Crossplay Mode (Custom API Key)");
                 const options = {
                     key: key,
                     clientId: this.myClientId
                 };
-                if (isSandbox) {
+                if (isSandboxKey) {
                     options.realtimeHost = 'sandbox-realtime.ably.io';
                     options.restHost = 'sandbox-rest.ably.io';
                     options.fallbackHosts = [

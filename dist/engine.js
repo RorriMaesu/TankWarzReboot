@@ -1340,6 +1340,39 @@ export class GameEngine {
         const lobbyStatus = document.getElementById('lobby-status');
         const lobbyStatusText = document.getElementById('lobby-status-text');
         const cancelMatchmakingBtn = document.getElementById('cancel-matchmaking-btn');
+        const ablyKeyInput = document.getElementById('ably-key-input');
+        const saveKeyBtn = document.getElementById('save-key-btn');
+        // Extract Ably key from URL parameters if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const keyParam = urlParams.get('key');
+        if (keyParam) {
+            localStorage.setItem('tankwars_ably_key', keyParam);
+            // Clean query parameter from URL without reload
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        }
+        // Populate key input from local storage
+        const savedKey = localStorage.getItem('tankwars_ably_key') || '';
+        if (ablyKeyInput) {
+            ablyKeyInput.value = savedKey;
+        }
+        // Save key listener
+        saveKeyBtn === null || saveKeyBtn === void 0 ? void 0 : saveKeyBtn.addEventListener('click', () => {
+            if (ablyKeyInput) {
+                const key = ablyKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('tankwars_ably_key', key);
+                }
+                else {
+                    localStorage.removeItem('tankwars_ably_key');
+                }
+                const originalText = saveKeyBtn.textContent;
+                saveKeyBtn.textContent = key ? "SAVED!" : "CLEARED!";
+                setTimeout(() => {
+                    saveKeyBtn.textContent = originalText;
+                }, 1500);
+            }
+        });
         this.network = new NetworkManager();
         this.network.onGameStart((windX, seed) => {
             this.isMultiplayer = true;
@@ -1405,18 +1438,35 @@ export class GameEngine {
             this.network.disconnect();
             lobbyOverlay === null || lobbyOverlay === void 0 ? void 0 : lobbyOverlay.classList.remove('hidden');
         });
+        cancelMatchmakingBtn === null || cancelMatchmakingBtn === void 0 ? void 0 : cancelMatchmakingBtn.addEventListener('click', () => {
+            this.network.disconnect();
+            lobbyOverlay === null || lobbyOverlay === void 0 ? void 0 : lobbyOverlay.classList.remove('hidden');
+        });
         quickMatchBtn === null || quickMatchBtn === void 0 ? void 0 : quickMatchBtn.addEventListener('click', () => __awaiter(this, void 0, void 0, function* () {
             lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.remove('hidden');
-            if (lobbyStatusText)
-                lobbyStatusText.innerText = "Connecting to matchmaking lobby...";
-            const success = yield this.network.init();
+            const userKey = localStorage.getItem('tankwars_ably_key') || undefined;
+            if (lobbyStatusText) {
+                if (!userKey) {
+                    lobbyStatusText.innerHTML = `Connecting to matchmaking lobby...<br><br><span style="font-size:0.75rem; color:#f59e0b;">⚠️ Isolated Sandbox Mode active.<br>You can only match with tabs open on this device.</span>`;
+                }
+                else {
+                    lobbyStatusText.innerHTML = `Connecting to matchmaking lobby...<br><br><span style="font-size:0.75rem; color:#10b981;">🔌 Custom Ably App Mode active.<br>Matches are live across all devices!</span>`;
+                }
+            }
+            const success = yield this.network.init(userKey);
             if (!success) {
                 alert("Realtime networking failed to initialize.");
                 lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.add('hidden');
                 return;
             }
-            if (lobbyStatusText)
-                lobbyStatusText.innerText = "Searching for opponent...";
+            if (lobbyStatusText) {
+                if (!userKey) {
+                    lobbyStatusText.innerHTML = `Searching for opponent...<br><br><span style="font-size:0.75rem; color:#f59e0b;">⚠️ Isolated Sandbox Mode active.</span>`;
+                }
+                else {
+                    lobbyStatusText.innerHTML = `Searching for opponent...<br><br><span style="font-size:0.75rem; color:#10b981;">🔌 Custom Ably App Mode active.</span>`;
+                }
+            }
             yield this.network.startQuickMatch((role) => {
                 this.isMultiplayer = true;
                 this.gameMode = 'pvp';
@@ -1432,9 +1482,16 @@ export class GameEngine {
         }));
         createRoomBtn === null || createRoomBtn === void 0 ? void 0 : createRoomBtn.addEventListener('click', () => __awaiter(this, void 0, void 0, function* () {
             lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.remove('hidden');
-            if (lobbyStatusText)
-                lobbyStatusText.innerText = "Provisioning private room...";
-            const success = yield this.network.init();
+            const userKey = localStorage.getItem('tankwars_ably_key') || undefined;
+            if (lobbyStatusText) {
+                if (!userKey) {
+                    lobbyStatusText.innerHTML = `Provisioning private room...<br><br><span style="font-size:0.75rem; color:#f59e0b;">⚠️ Isolated Sandbox Mode active.<br>You can only match with tabs open on this device.</span>`;
+                }
+                else {
+                    lobbyStatusText.innerHTML = `Provisioning private room...<br><br><span style="font-size:0.75rem; color:#10b981;">🔌 Custom Ably App Mode active.<br>Matches are live across all devices!</span>`;
+                }
+            }
+            const success = yield this.network.init(userKey);
             if (!success) {
                 alert("Realtime networking failed to initialize.");
                 lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.add('hidden');
@@ -1457,9 +1514,16 @@ export class GameEngine {
                 return;
             }
             lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.remove('hidden');
-            if (lobbyStatusText)
-                lobbyStatusText.innerText = `Connecting to room ${code}...`;
-            const success = yield this.network.init();
+            const userKey = localStorage.getItem('tankwars_ably_key') || undefined;
+            if (lobbyStatusText) {
+                if (!userKey) {
+                    lobbyStatusText.innerHTML = `Connecting to room ${code}...<br><br><span style="font-size:0.75rem; color:#f59e0b;">⚠️ Isolated Sandbox Mode active.<br>You can only match with tabs open on this device.</span>`;
+                }
+                else {
+                    lobbyStatusText.innerHTML = `Connecting to room ${code}...<br><br><span style="font-size:0.75rem; color:#10b981;">🔌 Custom Ably App Mode active.<br>Matches are live across all devices!</span>`;
+                }
+            }
+            const success = yield this.network.init(userKey);
             if (!success) {
                 alert("Realtime networking failed to initialize.");
                 lobbyStatus === null || lobbyStatus === void 0 ? void 0 : lobbyStatus.classList.add('hidden');
