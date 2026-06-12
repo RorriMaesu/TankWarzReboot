@@ -14,6 +14,7 @@ export class NetworkManager {
         this.gameChannel = null;
         this.activeRoomCode = '';
         this.role = 'local';
+        this.matchingInitiated = false;
         // Callbacks registered by the game engine
         this.onMoveCallback = null;
         this.onFireCallback = null;
@@ -106,56 +107,68 @@ export class NetworkManager {
             if (!this.queueChannel)
                 return;
             this.role = 'local';
+            this.matchingInitiated = false;
             try {
                 // 1. Explicitly attach to the queue channel first
                 yield this.queueChannel.attach();
-                // 2. Enter the public queue
+                // 2. Subscribe to presence events to scan for matches dynamically
+                this.queueChannel.presence.subscribe(() => {
+                    this.checkForMatch(onMatchStart);
+                });
+                // 3. Enter the public queue
                 yield this.queueChannel.presence.enter({
                     status: 'waiting',
                     roomId: this.myClientId,
                     timestamp: Date.now()
                 });
-                // 3. Scan active players in queue (guard against undefined results)
-                const members = (yield this.queueChannel.presence.get()) || [];
-                // Look for other waiting players
-                const waitingPlayers = members.filter((m) => { var _a; return m.clientId !== this.myClientId && ((_a = m.data) === null || _a === void 0 ? void 0 : _a.status) === 'waiting'; });
-                if (waitingPlayers.length > 0) {
-                    // Sort to match oldest waiting challenger (First-In, First-Out)
-                    waitingPlayers.sort((a, b) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
-                    const targetHost = waitingPlayers[0];
-                    const hostRoomId = targetHost.clientId;
-                    this.activeRoomCode = hostRoomId;
-                    this.role = 'guest';
-                    // Join host's private channel
-                    this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
-                    yield this.gameChannel.attach();
-                    this.subscribeToGameChannel();
-                    // Notify host that we are joining
-                    yield this.gameChannel.publish('handshake', { guestId: this.myClientId });
-                    // Update public status
-                    yield this.queueChannel.presence.update({
-                        status: 'matched',
-                        roomId: hostRoomId,
-                        timestamp: Date.now()
-                    });
-                    // Leave the queue
-                    this.queueChannel.presence.leave();
-                    onMatchStart('guest');
+                // 4. Run initial scan immediately
+                yield this.checkForMatch(onMatchStart);
+            }
+            catch (err) {
+                console.error("Matchmaking error:", err);
+                if (this.onDisconnectCallback) {
+                    this.onDisconnectCallback("Connection error during matchmaking.");
                 }
-                else {
-                    // No one waiting, host a new room
+            }
+        });
+    }
+    checkForMatch(onMatchStart) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.matchingInitiated || !this.queueChannel)
+                return;
+            try {
+                const members = (yield this.queueChannel.presence.get()) || [];
+                // Filter players who are actively waiting
+                const waiting = members.filter((m) => { var _a; return ((_a = m.data) === null || _a === void 0 ? void 0 : _a.status) === 'waiting'; });
+                if (waiting.length < 2)
+                    return; // Need at least 2 players to match
+                // Sort deterministically: by timestamp first, then by clientId
+                waiting.sort((a, b) => {
+                    var _a, _b;
+                    const timeA = ((_a = a.data) === null || _a === void 0 ? void 0 : _a.timestamp) || 0;
+                    const timeB = ((_b = b.data) === null || _b === void 0 ? void 0 : _b.timestamp) || 0;
+                    if (timeA !== timeB)
+                        return timeA - timeB;
+                    return a.clientId.localeCompare(b.clientId);
+                });
+                const hostMember = waiting[0];
+                const guestMember = waiting[1];
+                const amIHost = hostMember.clientId === this.myClientId;
+                const amIGuest = guestMember.clientId === this.myClientId;
+                if (!amIHost && !amIGuest)
+                    return; // Not in the active match pair
+                this.matchingInitiated = true;
+                this.queueChannel.presence.unsubscribe();
+                if (amIHost) {
                     this.role = 'host';
                     this.activeRoomCode = this.myClientId;
                     this.gameChannel = this.client.channels.get(`tankwars-room-${this.myClientId}`);
                     yield this.gameChannel.attach();
                     this.subscribeToGameChannel();
-                    // Listen for challenge handshake
                     this.gameChannel.subscribe('handshake', (msg) => __awaiter(this, void 0, void 0, function* () {
                         console.log(`Challenger joined: ${msg.data.guestId}. Launching match!`);
-                        // Remove from public queue
-                        this.queueChannel.presence.leave();
                         this.gameChannel.unsubscribe('handshake');
-                        // Host generates initial sync state (terrain seed and initial wind)
+                        this.queueChannel.presence.leave();
                         const initialWind = (Math.random() - 0.5) * 2.0;
                         const terrainSeed = Date.now();
                         yield this.gameChannel.publish('game_event', {
@@ -168,12 +181,38 @@ export class NetworkManager {
                         onMatchStart('host');
                     }));
                 }
+                else {
+                    const hostRoomId = hostMember.clientId;
+                    this.activeRoomCode = hostRoomId;
+                    this.role = 'guest';
+                    this.gameChannel = this.client.channels.get(`tankwars-room-${hostRoomId}`);
+                    yield this.gameChannel.attach();
+                    this.subscribeToGameChannel();
+                    yield this.queueChannel.presence.update({
+                        status: 'matched',
+                        roomId: hostRoomId,
+                        timestamp: Date.now()
+                    });
+                    this.queueChannel.presence.leave();
+                    let attempts = 0;
+                    const sendHandshake = () => __awaiter(this, void 0, void 0, function* () {
+                        if (this.role !== 'guest' || !this.gameChannel)
+                            return;
+                        try {
+                            yield this.gameChannel.publish('handshake', { guestId: this.myClientId });
+                            onMatchStart('guest');
+                        }
+                        catch (e) {
+                            if (attempts++ < 5) {
+                                setTimeout(sendHandshake, 1000);
+                            }
+                        }
+                    });
+                    setTimeout(sendHandshake, 500);
+                }
             }
             catch (err) {
-                console.error("Matchmaking error:", err);
-                if (this.onDisconnectCallback) {
-                    this.onDisconnectCallback("Connection error during matchmaking.");
-                }
+                console.error("Match check error:", err);
             }
         });
     }
@@ -291,6 +330,7 @@ export class NetworkManager {
     disconnect() {
         try {
             if (this.queueChannel) {
+                this.queueChannel.presence.unsubscribe();
                 this.queueChannel.presence.leave();
             }
             if (this.gameChannel) {
@@ -304,6 +344,7 @@ export class NetworkManager {
         this.gameChannel = null;
         this.activeRoomCode = '';
         this.role = 'local';
+        this.matchingInitiated = false;
     }
 }
 //# sourceMappingURL=network.js.map
