@@ -3,7 +3,7 @@ declare const mqtt: any;
 import { WeaponType } from './types.js';
 
 export interface GameEventPayload {
-  type: 'move' | 'fire' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn' | 'rematch_ready';
+  type: 'move' | 'fire' | 'aim' | 'wind_sync' | 'crate_drop' | 'turn_end' | 'game_start' | 'mine_spawn' | 'rematch_ready';
   data: any;
 }
 
@@ -37,6 +37,7 @@ export class NetworkManager {
   // Callbacks registered by the game engine
   private onMoveCallback: ((x: number) => void) | null = null;
   private onFireCallback: ((power: number, angle: number, weaponType: WeaponType) => void) | null = null;
+  private onAimCallback: ((power: number, angle: number) => void) | null = null;
   private onWindSyncCallback: ((windX: number) => void) | null = null;
   private onCrateDropCallback: ((x: number, crateType: 'heal' | 'fuel' | 'nuke') => void) | null = null;
   private onTurnEndCallback: (() => void) | null = null;
@@ -100,9 +101,9 @@ export class NetworkManager {
     });
   }
 
-  // Register event handlers
   public onMove(cb: (x: number) => void) { this.onMoveCallback = cb; }
   public onFire(cb: (power: number, angle: number, weaponType: WeaponType) => void) { this.onFireCallback = cb; }
+  public onAim(cb: (power: number, angle: number) => void) { this.onAimCallback = cb; }
   public onWindSync(cb: (windX: number) => void) { this.onWindSyncCallback = cb; }
   public onCrateDrop(cb: (x: number, crateType: 'heal' | 'fuel' | 'nuke') => void) { this.onCrateDropCallback = cb; }
   public onTurnEnd(cb: () => void) { this.onTurnEndCallback = cb; }
@@ -275,6 +276,11 @@ export class NetworkManager {
           case 'fire':
             if (this.onFireCallback) {
               this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
+            }
+            break;
+          case 'aim':
+            if (this.onAimCallback) {
+              this.onAimCallback(payload.data.power, payload.data.angle);
             }
             break;
           case 'wind_sync':

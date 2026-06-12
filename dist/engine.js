@@ -32,6 +32,7 @@ export class GameEngine {
         this.isMultiplayer = false;
         this.isDraggingAim = false;
         this.lastMovePublishTime = 0;
+        this.lastAimPublishTime = 0;
         this.lastTime = 0;
         this.accumulator = 0;
         this.TIME_STEP = 1000 / 60;
@@ -430,6 +431,9 @@ export class GameEngine {
                 activePlayer.aimAngle = (angle * Math.PI) / 180;
             }
             activePlayer.aimPower = power;
+            if (this.isMyTurnLocal()) {
+                this.sendAimEventThrottled(activePlayer.aimPower, activePlayer.aimAngle);
+            }
         }
     }
     synchronizeSliders(player) {
@@ -1456,6 +1460,13 @@ export class GameEngine {
                 activePlayer.targetX = x;
             }
         });
+        this.network.onAim((power, angle) => {
+            const opponent = this.players[this.network.role === 'host' ? 1 : 0];
+            if (opponent) {
+                opponent.aimPower = power;
+                opponent.aimAngle = angle;
+            }
+        });
         this.network.onFire((power, angle, weaponType) => {
             const activePlayer = this.getActivePlayer();
             activePlayer.aimPower = power;
@@ -1592,6 +1603,15 @@ export class GameEngine {
         if (force || now - this.lastMovePublishTime > 120) {
             this.network.sendEvent('move', { x });
             this.lastMovePublishTime = now;
+        }
+    }
+    sendAimEventThrottled(power, angle, force = false) {
+        if (!this.isMultiplayer)
+            return;
+        const now = Date.now();
+        if (force || now - this.lastAimPublishTime > 100) {
+            this.network.sendEvent('aim', { power, angle });
+            this.lastAimPublishTime = now;
         }
     }
     setupTouchControls() {

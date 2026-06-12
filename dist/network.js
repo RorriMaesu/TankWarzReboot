@@ -25,6 +25,7 @@ export class NetworkManager {
         // Callbacks registered by the game engine
         this.onMoveCallback = null;
         this.onFireCallback = null;
+        this.onAimCallback = null;
         this.onWindSyncCallback = null;
         this.onCrateDropCallback = null;
         this.onTurnEndCallback = null;
@@ -78,9 +79,9 @@ export class NetworkManager {
             }
         });
     }
-    // Register event handlers
     onMove(cb) { this.onMoveCallback = cb; }
     onFire(cb) { this.onFireCallback = cb; }
+    onAim(cb) { this.onAimCallback = cb; }
     onWindSync(cb) { this.onWindSyncCallback = cb; }
     onCrateDrop(cb) { this.onCrateDropCallback = cb; }
     onTurnEnd(cb) { this.onTurnEndCallback = cb; }
@@ -242,6 +243,11 @@ export class NetworkManager {
                     case 'fire':
                         if (this.onFireCallback) {
                             this.onFireCallback(payload.data.power, payload.data.angle, payload.data.weaponType);
+                        }
+                        break;
+                    case 'aim':
+                        if (this.onAimCallback) {
+                            this.onAimCallback(payload.data.power, payload.data.angle);
                         }
                         break;
                     case 'wind_sync':

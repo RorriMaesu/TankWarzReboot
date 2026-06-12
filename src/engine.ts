@@ -70,6 +70,7 @@ export class GameEngine {
   private isMultiplayer: boolean = false;
   private isDraggingAim: boolean = false;
   private lastMovePublishTime: number = 0;
+  private lastAimPublishTime: number = 0;
   private lastTime: number = 0;
   private accumulator: number = 0;
   private readonly TIME_STEP: number = 1000 / 60;
@@ -502,6 +503,10 @@ export class GameEngine {
         activePlayer.aimAngle = (angle * Math.PI) / 180;
       }
       activePlayer.aimPower = power;
+
+      if (this.isMyTurnLocal()) {
+        this.sendAimEventThrottled(activePlayer.aimPower, activePlayer.aimAngle);
+      }
     }
   }
 
@@ -1693,6 +1698,14 @@ export class GameEngine {
       }
     });
 
+    this.network.onAim((power, angle) => {
+      const opponent = this.players[this.network.role === 'host' ? 1 : 0];
+      if (opponent) {
+        opponent.aimPower = power;
+        opponent.aimAngle = angle;
+      }
+    });
+
     this.network.onFire((power, angle, weaponType) => {
       const activePlayer = this.getActivePlayer();
       activePlayer.aimPower = power;
@@ -1845,6 +1858,15 @@ export class GameEngine {
     if (force || now - this.lastMovePublishTime > 120) {
       this.network.sendEvent('move', { x });
       this.lastMovePublishTime = now;
+    }
+  }
+
+  private sendAimEventThrottled(power: number, angle: number, force: boolean = false) {
+    if (!this.isMultiplayer) return;
+    const now = Date.now();
+    if (force || now - this.lastAimPublishTime > 100) {
+      this.network.sendEvent('aim', { power, angle });
+      this.lastAimPublishTime = now;
     }
   }
 
