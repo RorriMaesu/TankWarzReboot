@@ -215,8 +215,8 @@ export class Player {
   }
 
   public draw(ctx: CanvasRenderingContext2D, isCurrentTurn: boolean): void {
-    // Proportions: Tracks are scaled up (width 72, height 13), Chassis is doubled in size (width 80, height 32)
-    const trackWidth = 72; // Scaled up to balance with 80px body width
+    // Proportions: Tracks are scaled up (width 68, height 9), Chassis is doubled in size (width 80, height 32)
+    const trackWidth = 68; // Balanced with 80px body width
     const bodyWidth = 80;
     const x = this.position.x;
     const y = this.position.y;
@@ -262,9 +262,10 @@ export class Player {
     }
 
     // 2. Draw Wheels / Tracks on top of Chassis bottom to cover static treads in the image
+    // Sized down slightly (width: 68px, height: 9px) to fit snuggly under the 80px chassis
     ctx.fillStyle = '#334155'; // Dark slate grey
     ctx.beginPath();
-    ctx.roundRect(x - trackWidth / 2 - 2, y - 16, trackWidth + 4, 11, 4);
+    ctx.roundRect(x - trackWidth / 2, y - 11, trackWidth, 9, 3);
     ctx.fill();
 
     // Draw track wheel spoke circles with dynamic rotation only when moving
@@ -279,22 +280,23 @@ export class Player {
     this.lastX = x;
 
     for (let i = -2; i <= 2; i++) {
-      const wheelX = x + (i * 14); // Distributed across the track width
-      const wheelY = y - 10.5;
+      const wheelX = x + (i * 13); // Distributed across the tighter track width
+      const wheelY = y - 6.5; // Raised slightly to sit centered inside the 9px tall track
+      const r = 3.2; // Slightly smaller wheel radius (from 4.5 to 3.2)
       
       ctx.save();
       ctx.beginPath();
-      ctx.arc(wheelX, wheelY, 4.5, 0, Math.PI * 2); // Chunky track wheels
+      ctx.arc(wheelX, wheelY, r, 0, Math.PI * 2);
       ctx.fill();
       
       // Draw spinning spoke lines
       ctx.translate(wheelX, wheelY);
       ctx.rotate(this.wheelAngle + i * 0.4);
       ctx.beginPath();
-      ctx.moveTo(-4.5, 0);
-      ctx.lineTo(4.5, 0);
-      ctx.moveTo(0, -4.5);
-      ctx.lineTo(0, 4.5);
+      ctx.moveTo(-r, 0);
+      ctx.lineTo(r, 0);
+      ctx.moveTo(0, -r);
+      ctx.lineTo(0, r);
       ctx.stroke();
       ctx.restore();
     }
