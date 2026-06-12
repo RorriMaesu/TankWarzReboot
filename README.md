@@ -6,6 +6,16 @@ A high-juice, responsive HTML5 artillery game featuring destructible vector terr
 
 ---
 
+## 🎮 Gameplay Preview
+
+| Lobby Menu | Tank Movement |
+| :---: | :---: |
+| ![Lobby Menu](assets/screenshots/lobby.png) | ![Tank Movement](assets/screenshots/movement.png) |
+| **Projectile Flight** | **Explosion & Destructible Terrain** |
+| ![Projectile Flight](assets/screenshots/projectile.png) | ![Explosion](assets/screenshots/explosion.png) |
+
+---
+
 ## 🕹️ Key Features
 
 *   **Realtime Online Multiplayer**: Instant matchmaking ("Quick Match") and private game rooms (4-letter invite codes) powered entirely client-side using Ably's serverless WebSocket cloud.
