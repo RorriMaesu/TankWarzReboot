@@ -23,6 +23,7 @@ body {
     width: 100vw;
     height: 100vh;
     background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    overscroll-behavior: none;
 }
 
 #game-container {
@@ -30,6 +31,7 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
 #game-container::after {
@@ -53,6 +55,7 @@ canvas {
     height: 100%;
     object-fit: contain;
     background-color: #0c0f1d;
+    touch-action: none;
 }
 
 #ui-layer {
@@ -857,6 +860,11 @@ button:not(#fire-button):active {
 
 /* ── RESPONSIVE MOBILE STYLING (OPTIMIZED FOR LANDSCAPE) ── */
 @media (max-width: 1024px) {
+    /* Touch Action & Overscroll Locks */
+    #ui-layer {
+        padding: 8px calc(12px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    }
+
     /* Top HUD Optimization */
     #hud {
         padding: 4px 10px;
@@ -973,8 +981,15 @@ button:not(#fire-button):active {
         flex: 1;
     }
     
+    /* Disable desktop hover effects on mobile to prevent sticky highlights */
     .control-group:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.02);
+        border-color: rgba(255, 255, 255, 0.04);
+        box-shadow: none;
+    }
+    
+    .control-group:active {
+        background: rgba(255, 255, 255, 0.06);
     }
     
     .control-group--wide {
@@ -993,6 +1008,11 @@ button:not(#fire-button):active {
         height: 28px;
         border-radius: 6px;
         background: #1e293b;
+    }
+    
+    select:hover {
+        background: #1e293b;
+        border-color: rgba(255, 255, 255, 0.12);
     }
     
     /* Range Sliders Optimization */
@@ -1021,6 +1041,10 @@ button:not(#fire-button):active {
         height: 4px;
     }
     
+    input[type="range"]::-webkit-slider-thumb:hover {
+        transform: none;
+    }
+    
     /* Fire Button (Circular Floating Design) */
     button#fire-button {
         width: 52px;
@@ -1036,18 +1060,20 @@ button:not(#fire-button):active {
     }
     
     button#fire-button:hover {
-        transform: scale(1.05);
+        transform: none;
+        filter: none;
     }
     
     button#fire-button:active {
-        transform: scale(0.92);
+        transform: scale(0.92) !important;
+        filter: brightness(0.95);
     }
 
     /* D-pad Driving Controls */
     #mobile-dpad {
         display: flex !important;
-        bottom: 6px;
-        left: 12px;
+        bottom: calc(6px + env(safe-area-inset-bottom));
+        left: calc(12px + env(safe-area-inset-left));
         gap: 10px;
         z-index: 1000;
     }
@@ -1062,6 +1088,7 @@ button:not(#fire-button):active {
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), inset 0 0 8px rgba(59, 130, 246, 0.1);
+        touch-action: none; /* Block double-tap browser zoom */
     }
     
     .dpad-btn:active {
@@ -1085,6 +1112,10 @@ button:not(#fire-button):active {
         overflow-y: auto;
     }
     
+    .lobby-card::before {
+        height: 2px;
+    }
+    
     .lobby-header h2 {
         font-size: 1.6rem;
     }
@@ -1104,13 +1135,26 @@ button:not(#fire-button):active {
         font-size: 0.85rem;
     }
     
+    .lobby-btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    .lobby-btn.primary {
+        box-shadow: 0 0 12px rgba(6, 182, 212, 0.2) !important;
+    }
+    
+    .lobby-btn:active {
+        transform: scale(0.97) !important;
+    }
+    
     .join-row {
         gap: 6px;
     }
     
     #room-input {
         padding: 8px;
-        font-size: 0.95rem;
+        font-size: 16px; /* Exactly 16px to prevent iOS Safari auto-zoom */
     }
     
     .lobby-btn.join {
@@ -1138,5 +1182,14 @@ button:not(#fire-button):active {
         padding: 8px 16px;
         font-size: 0.85rem;
         border-radius: 8px;
+    }
+    
+    button:not(#fire-button):hover {
+        transform: none;
+        box-shadow: none;
+    }
+    
+    button:not(#fire-button):active {
+        transform: scale(0.96);
     }
 }
