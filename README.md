@@ -11,8 +11,10 @@ A high-juice, responsive HTML5 artillery game featuring destructible vector terr
 | Lobby Menu | Tank Movement |
 | :---: | :---: |
 | ![Lobby Menu](assets/screenshots/lobby.png) | ![Tank Movement](assets/screenshots/movement.png) |
-| **Projectile Flight** | **Explosion & Destructible Terrain** |
-| ![Projectile Flight](assets/screenshots/projectile.png) | ![Explosion](assets/screenshots/explosion.png) |
+| **Tank Firing (Recoil & Flash)** | **Heavy Mortar Blast (Chain Detonation)** |
+| ![Tank Firing](assets/screenshots/firing.png) | ![Heavy Mortar Blast](assets/screenshots/mortar_explosion.png) |
+| **Dirt Spreader (Terraforming)** | **Bouncing Grenade (Purple Detonation)** |
+| ![Dirt Spreader](assets/screenshots/dirt_spreader_explosion.png) | ![Bouncing Grenade](assets/screenshots/bouncing_grenade_explosion.png) |
 
 ---
 

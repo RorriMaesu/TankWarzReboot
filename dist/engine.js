@@ -166,6 +166,8 @@ export class GameEngine {
         this.setupLobbyHandlers();
         this.setupTouchControls();
         this.setupFullscreenButton();
+        // Expose game instance globally for automation scripts
+        window.game = this;
         // Start main game loop
         requestAnimationFrame((t) => this.gameLoop(t));
     }
