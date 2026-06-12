@@ -37,19 +37,19 @@ export class BackgroundManager {
   private loadImages() {
     // Load Sky Layer
     this.skyImg = new Image();
-    this.skyImg.src = 'assets/sky.png?v=1.1.6';
+    this.skyImg.src = 'assets/sky.png?v=1.1.7';
     this.skyImg.onload = () => { this.assetsLoaded.sky = true; };
     this.skyImg.onerror = () => { this.skyImg = null; };
 
     // Load Distant Skyline
     this.distantImg = new Image();
-    this.distantImg.src = 'assets/distant_ruins.png?v=1.1.6';
+    this.distantImg.src = 'assets/distant_ruins.png?v=1.1.7';
     this.distantImg.onload = () => { this.assetsLoaded.distant = true; };
     this.distantImg.onerror = () => { this.distantImg = null; };
 
     // Load Near Skyline
     this.nearImg = new Image();
-    this.nearImg.src = 'assets/near_ruins.png?v=1.1.6';
+    this.nearImg.src = 'assets/near_ruins.png?v=1.1.7';
     this.nearImg.onload = () => { this.assetsLoaded.near = true; };
     this.nearImg.onerror = () => { this.nearImg = null; };
   }

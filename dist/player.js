@@ -76,16 +76,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.6').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.7').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.6').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.7').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.6').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.7').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.6').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.7').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
