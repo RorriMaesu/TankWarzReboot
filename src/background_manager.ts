@@ -193,8 +193,8 @@ export class BackgroundManager {
       ctx.restore();
     }
 
-    // 2. Draw distant building silhouettes (Far parallax: 10% movement)
-    const distParallax = cameraOffsetX * 0.1;
+    // 2. Draw distant building silhouettes (Static)
+    const distParallax = 0;
     if (this.assetsLoaded.distant && this.distantImg) {
       // Tiled distant skyline image at the bottom of the canvas
       this.drawTiledImage(ctx, this.distantImg, distParallax, h - 450, 450);
@@ -202,7 +202,7 @@ export class BackgroundManager {
       // Programmatic Distant Skyline fallback
       ctx.fillStyle = '#1e1428';
       this.distantBuildings.forEach(b => {
-        const renderX = b.x - distParallax;
+        const renderX = b.x;
         ctx.beginPath();
         ctx.rect(renderX, h - b.height, b.width, b.height);
         ctx.fill();
@@ -216,15 +216,15 @@ export class BackgroundManager {
       });
     }
 
-    // 3. Draw near building silhouettes (Near parallax: 22% movement)
-    const nearParallax = cameraOffsetX * 0.22;
+    // 3. Draw near building silhouettes (Static)
+    const nearParallax = 0;
     if (this.assetsLoaded.near && this.nearImg) {
       // Tiled near ruins image
       this.drawTiledImage(ctx, this.nearImg, nearParallax, h - 500, 500);
     } else {
       // Programmatic Near Skyline fallback
       this.nearBuildings.forEach(b => {
-        const renderX = b.x - nearParallax;
+        const renderX = b.x;
         ctx.fillStyle = '#0f0b18';
         ctx.beginPath();
         ctx.moveTo(renderX, h);
