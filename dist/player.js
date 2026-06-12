@@ -76,16 +76,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.4').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.5').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.4').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.5').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.4').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.5').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.4').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.5').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
@@ -173,7 +173,6 @@ export class Player {
             }
             else {
                 ctx.translate(x, y - 16);
-                ctx.scale(-1, 1); // Flip orange opponent chassis to face left towards Player 1
                 ctx.drawImage(chassisImg, -bodyWidth / 2, -16, bodyWidth, 32);
             }
             ctx.restore();
