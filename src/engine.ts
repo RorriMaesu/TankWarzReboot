@@ -102,6 +102,11 @@ export class GameEngine {
   private localReadyForRematch: boolean = false;
   private remoteReadyForRematch: boolean = false;
 
+  // Mobile detection & fullscreen state
+  private isMobile: boolean = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  private hasRequestedFullscreen: boolean = false;
+  private touchAimHintShown: boolean = false;
+
   // Weapon templates
   private weapons: Record<WeaponType, Weapon> = {
     small_cannon: {
@@ -205,6 +210,7 @@ export class GameEngine {
     this.setupEventListeners();
     this.setupLobbyHandlers();
     this.setupTouchControls();
+    this.setupFullscreenButton();
     
     // Start main game loop
     requestAnimationFrame((t) => this.gameLoop(t));
@@ -283,6 +289,9 @@ export class GameEngine {
     this.uiManager.hideGameOver();
     this.uiManager.logMessage("Battle initiated. Adjust sliders and deploy fire!");
     this.updateSliderOutputs();
+
+    // Show one-time touch-aim hint on mobile
+    this.showTouchAimHint();
   }
 
   private spawnMine(x: number) {
@@ -1779,6 +1788,12 @@ export class GameEngine {
       this.network.disconnect();
       lobbyStatus?.classList.add('hidden');
     });
+
+    // Request fullscreen on first lobby button tap (mobile only)
+    const lobbyButtons = [quickMatchBtn, createRoomBtn, joinRoomBtn, localPlayBtn];
+    lobbyButtons.forEach(btn => {
+      btn?.addEventListener('click', () => this.requestMobileFullscreen(), { once: true });
+    });
   }
 
   private sendMoveEventThrottled(x: number, force: boolean = false) {
@@ -1811,8 +1826,9 @@ export class GameEngine {
         Math.pow(touchY - (player.position.y - 10), 2)
       );
 
-      if (dist < 50) {
+      if (dist < 80) {
         this.isDraggingAim = true;
+        this.dismissTouchAimHint();
         e.preventDefault();
       }
     });
@@ -1926,6 +1942,82 @@ export class GameEngine {
     
     rightBtn?.addEventListener('touchstart', (e) => { e.preventDefault(); startDriving('right'); });
     rightBtn?.addEventListener('touchend', (e) => { e.preventDefault(); stopDriving(); });
+  }
+
+  // ── MOBILE FULLSCREEN API ────────────────────────────────
+  private requestMobileFullscreen() {
+    if (!this.isMobile || this.hasRequestedFullscreen) return;
+    this.hasRequestedFullscreen = true;
+
+    const el = document.documentElement as any;
+    const requestFS = el.requestFullscreen
+      || el.webkitRequestFullscreen
+      || el.msRequestFullscreen;
+
+    if (requestFS) {
+      requestFS.call(el).catch(() => {
+        // Silently fail — some browsers block fullscreen even with user gesture
+      });
+    }
+
+    // Listen for fullscreen exit to show re-entry button
+    document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
+    document.addEventListener('webkitfullscreenchange', () => this.onFullscreenChange());
+  }
+
+  private onFullscreenChange() {
+    const isFS = !!(document as any).fullscreenElement || !!(document as any).webkitFullscreenElement;
+    const fsBtn = document.getElementById('fullscreen-btn');
+    if (fsBtn) {
+      // Show the re-entry button when NOT in fullscreen, hide when in fullscreen
+      fsBtn.classList.toggle('hidden', isFS);
+    }
+  }
+
+  private setupFullscreenButton() {
+    const fsBtn = document.getElementById('fullscreen-btn');
+    if (!fsBtn) return;
+
+    fsBtn.addEventListener('click', () => {
+      const el = document.documentElement as any;
+      const requestFS = el.requestFullscreen
+        || el.webkitRequestFullscreen
+        || el.msRequestFullscreen;
+
+      if (requestFS) {
+        requestFS.call(el).catch(() => {});
+      }
+    });
+
+    // Only show on mobile when not in fullscreen and after first use
+    if (!this.isMobile) {
+      fsBtn.classList.add('hidden');
+    }
+  }
+
+  // ── TOUCH AIM HINT ───────────────────────────────────────
+  public showTouchAimHint() {
+    if (!this.isMobile || this.touchAimHintShown) return;
+    if (sessionStorage.getItem('tankwars_aim_hint_shown')) return;
+
+    this.touchAimHintShown = true;
+    sessionStorage.setItem('tankwars_aim_hint_shown', '1');
+
+    const hint = document.getElementById('touch-aim-hint');
+    if (hint) {
+      hint.classList.remove('hidden');
+      // Auto-dismiss after 4s (the CSS animation handles fade out)
+      setTimeout(() => {
+        hint.classList.add('hidden');
+      }, 4000);
+    }
+  }
+
+  private dismissTouchAimHint() {
+    const hint = document.getElementById('touch-aim-hint');
+    if (hint && !hint.classList.contains('hidden')) {
+      hint.classList.add('hidden');
+    }
   }
 }
 

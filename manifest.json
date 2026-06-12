@@ -1,0 +1,11 @@
+{
+  "name": "Tank Wars - Destructible Battleground",
+  "short_name": "TankWarz",
+  "description": "Multiplayer artillery duel with destructible terrain",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "icons": []
+}

@@ -860,7 +860,96 @@ button:not(#fire-button):active {
     }
 }
 
-/* ── RESPONSIVE MOBILE STYLING (OPTIMIZED FOR LANDSCAPE) ── */
+/* ── FULLSCREEN BACKDROP ─────────────────────────────────── */
+::backdrop {
+    background: #0f172a;
+}
+
+/* ── TOUCH AIM HINT ──────────────────────────────────────── */
+#touch-aim-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 500;
+    pointer-events: none;
+    animation: aim-hint-fade 4s ease-in-out forwards;
+}
+
+.aim-hint-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 10px 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.aim-hint-icon {
+    font-size: 1.4rem;
+    animation: aim-hint-bounce 1.2s ease-in-out infinite;
+}
+
+.aim-hint-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+@keyframes aim-hint-fade {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+}
+
+@keyframes aim-hint-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* ── FULLSCREEN RE-ENTRY BUTTON ──────────────────────────── */
+#fullscreen-btn {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3000;
+    padding: 0;
+    min-width: unset;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#fullscreen-btn:hover {
+    background: rgba(15, 23, 42, 0.8);
+    color: #f8fafc;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#fullscreen-btn:active {
+    transform: scale(0.92);
+}
+
 @media (max-width: 1024px) {
     /* Touch Action & Overscroll Locks */
     #ui-layer {
@@ -874,7 +963,9 @@ button:not(#fire-button):active {
     }
     
     .hud-panel {
-        padding: 4px 8px;
+        padding: 3px 6px;
+        background: rgba(15, 23, 42, 0.55);
+        border-left: none;
     }
     
     .hud-panel .label {
@@ -883,8 +974,8 @@ button:not(#fire-button):active {
     }
     
     .stats-row {
-        gap: 10px;
-        font-size: 0.8rem;
+        gap: 8px;
+        font-size: 0.72rem;
     }
     
     .stat-bars {
@@ -893,14 +984,14 @@ button:not(#fire-button):active {
     }
     
     .bar-track {
-        width: 75px;
+        width: 65px;
         height: 3px;
     }
     
     #turn-indicator {
-        font-size: 0.75rem;
-        padding: 4px 10px;
-        border-radius: 6px;
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        border-radius: 5px;
     }
     
     #wind-indicator {
@@ -908,8 +999,7 @@ button:not(#fire-button):active {
     }
     
     #wind-indicator .label {
-        font-size: 0.55rem;
-        margin-bottom: 2px;
+        display: none; /* Hide 'WIND SYSTEM' label — the arrow + value is self-explanatory */
     }
     
     .wind-row {
@@ -937,11 +1027,11 @@ button:not(#fire-button):active {
     #controls {
         flex-direction: row;
         align-items: center;
-        gap: 10px;
-        padding: 4px 12px 4px 135px; /* Reserve left side for D-pad */
-        height: 56px;
+        gap: 8px;
+        padding: 3px 10px 3px 110px; /* Reserve left side for D-pad */
+        height: 46px;
         box-sizing: border-box;
-        border-radius: 12px;
+        border-radius: 10px;
         background: rgba(15, 23, 42, 0.65);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -972,12 +1062,12 @@ button:not(#fire-button):active {
     .control-group {
         flex-direction: row;
         align-items: center;
-        gap: 6px;
-        padding: 4px 8px;
+        gap: 5px;
+        padding: 3px 6px;
         background: rgba(255, 255, 255, 0.02);
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.04);
-        height: 44px;
+        height: 36px;
         box-sizing: border-box;
         margin: 0;
         flex: 1;
@@ -1010,9 +1100,9 @@ button:not(#fire-button):active {
     }
     
     select {
-        padding: 3px 6px;
-        font-size: 0.72rem;
-        height: 30px;
+        padding: 2px 5px;
+        font-size: 0.7rem;
+        height: 26px;
         border-radius: 6px;
         background: #1e293b;
         max-width: 100%;
@@ -1075,11 +1165,11 @@ button:not(#fire-button):active {
     
     /* Fire Button (Circular Floating Design) */
     button#fire-button {
-        width: 56px;
-        height: 56px;
-        min-width: 56px;
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
         border-radius: 50%;
-        font-size: 0.82rem;
+        font-size: 0.75rem;
         padding: 0;
         margin: 0;
         align-self: center;
@@ -1101,9 +1191,9 @@ button:not(#fire-button):active {
     /* D-pad Driving Controls */
     #mobile-dpad {
         display: flex !important;
-        bottom: calc(6px + env(safe-area-inset-bottom));
-        left: calc(12px + env(safe-area-inset-left));
-        gap: 10px;
+        bottom: calc(4px + env(safe-area-inset-bottom));
+        left: calc(10px + env(safe-area-inset-left));
+        gap: 8px;
         z-index: 1000;
         transition: opacity 0.3s ease;
     }
@@ -1114,9 +1204,9 @@ button:not(#fire-button):active {
     }
     
     .dpad-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 1.4rem;
+        width: 42px;
+        height: 42px;
+        font-size: 1.2rem;
         border: 1.5px solid rgba(59, 130, 246, 0.35);
         color: #3b82f6;
         background: rgba(15, 23, 42, 0.7);
@@ -1235,21 +1325,21 @@ button:not(#fire-button):active {
 
     /* Game Over Screen Mobile Scaling */
     .game-over-content {
-        padding: 14px 24px;
-        max-width: 300px;
+        padding: 10px 18px;
+        max-width: 280px;
         max-height: 92vh;
         max-height: 92dvh;
         overflow-y: auto;
     }
     
     .game-over-content h1 {
-        font-size: 1.8rem;
-        margin: 0 0 6px 0;
+        font-size: 1.5rem;
+        margin: 0 0 4px 0;
     }
     
     .game-over-content p {
-        margin-bottom: 12px;
-        font-size: 0.82rem;
+        margin-bottom: 8px;
+        font-size: 0.78rem;
     }
     
     button:not(#fire-button) {
