@@ -56,8 +56,8 @@ export class Player {
                         const r = data[i];
                         const g = data[i + 1];
                         const b = data[i + 2];
-                        // Key out solid black background from generated sprite sheets
-                        if (r < 20 && g < 20 && b < 20) {
+                        // Key out solid black background and dark drop shadows from generated sprite sheets
+                        if (r < 55 && g < 55 && b < 55) {
                             data[i + 3] = 0; // Transparent
                         }
                     }
@@ -76,16 +76,16 @@ export class Player {
         if (Player.assetsLoaded)
             return;
         Player.assetsLoaded = true;
-        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.0').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_blue.png?v=1.1.1').then(canvas => {
             Player.blueChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.0').then(canvas => {
+        Player.loadAndChromaKey('assets/chassis_orange.png?v=1.1.1').then(canvas => {
             Player.orangeChassisCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.0').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_blue.png?v=1.1.1').then(canvas => {
             Player.blueTurretCanvas = canvas;
         });
-        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.0').then(canvas => {
+        Player.loadAndChromaKey('assets/turret_orange.png?v=1.1.1').then(canvas => {
             Player.orangeTurretCanvas = canvas;
         });
     }
@@ -169,7 +169,18 @@ export class Player {
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
         if (chassisImg && chassisImg.width > 0) {
             ctx.save();
-            ctx.drawImage(chassisImg, x - bodyWidth / 2, y - 32, bodyWidth, 32);
+            // Player 1 (blue) is facing left in the raw image, so we flip it horizontally to face right.
+            // AI/Opponent (orange) faces right in the raw image, but we flip it to face left.
+            if (this.type === 'player') {
+                ctx.translate(x, y - 16);
+                ctx.scale(-1, 1);
+                ctx.drawImage(chassisImg, -bodyWidth / 2, -16, bodyWidth, 32);
+            }
+            else {
+                ctx.translate(x, y - 16);
+                ctx.scale(-1, 1); // Flip orange opponent chassis to face left towards Player 1
+                ctx.drawImage(chassisImg, -bodyWidth / 2, -16, bodyWidth, 32);
+            }
             ctx.restore();
         }
         else {
