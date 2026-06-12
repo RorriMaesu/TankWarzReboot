@@ -86,6 +86,7 @@ export class Player {
         this.targetX = null;
         this.targetAimAngle = null;
         this.targetAimPower = null;
+        this.groundSlopeAngle = 0;
         this.lastX = null;
         this.wheelAngle = 0;
         if (!Player.assetsLoaded) {
@@ -116,9 +117,22 @@ export class Player {
     }
     getBarrelTip() {
         // 50 is resting barrel length, 28 is turret joint height offset relative to ground position
+        // We rotate this offset vector by groundSlopeAngle to match the visual rendering rotation.
+        const baseAngle = -this.aimAngle; // aimAngle goes up (negative y), rendering rotate uses -aimAngle.
+        // Joint position relative to tank ground origin (0, -28)
+        const jointOffsetX = 0;
+        const jointOffsetY = -28;
+        // Barrel tip relative to joint before tank slope rotation (jointOffsetX + barrelX, jointOffsetY + barrelY)
+        const localTipX = Math.cos(baseAngle) * 50;
+        const localTipY = jointOffsetY + Math.sin(baseAngle) * 50;
+        // Apply ground slope rotation to the vector (localTipX, localTipY)
+        const cosS = Math.cos(this.groundSlopeAngle);
+        const sinS = Math.sin(this.groundSlopeAngle);
+        const rotatedTipX = localTipX * cosS - localTipY * sinS;
+        const rotatedTipY = localTipX * sinS + localTipY * cosS;
         return {
-            x: this.position.x + Math.cos(this.aimAngle) * 50,
-            y: this.position.y - 28 - Math.sin(this.aimAngle) * 50
+            x: this.position.x + rotatedTipX,
+            y: this.position.y + rotatedTipY
         };
     }
     /**
@@ -134,6 +148,14 @@ export class Player {
             // Snap to terrain height
             this.position.y = targetY;
         }
+        // Calculate ground slope by sampling left and right wheel positions
+        const sampleOffset = 20; // 20px left and right of tank center
+        const leftY = terrain.getHeight(this.position.x - sampleOffset);
+        const rightY = terrain.getHeight(this.position.x + sampleOffset);
+        // slope angle = atan2(dy, dx)
+        const rawSlope = Math.atan2(rightY - leftY, sampleOffset * 2);
+        // Interpolate groundSlopeAngle smoothly to prevent jittering over jagged edges
+        this.groundSlopeAngle += (rawSlope - this.groundSlopeAngle) * 0.15;
         // Smooth recoil decay (spring-damper style)
         this.recoilOffset = Math.max(0, this.recoilOffset - this.recoilOffset * 0.16);
         this.recoilAngle = this.recoilAngle * 0.82;
@@ -169,10 +191,11 @@ export class Player {
         ctx.save();
         const mainColor = this.type === 'player' ? '#3b82f6' : '#ef4444'; // Electric blue or vibrant red
         const secondaryColor = this.type === 'player' ? '#1d4ed8' : '#b91c1c';
-        // Apply recoil translation/rotation (No suspension bobbing)
+        // Apply slope translation/rotation & recoil translation/rotation
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(this.recoilAngle);
+        ctx.rotate(this.groundSlopeAngle); // Rotate to align with terrain slope
+        ctx.rotate(this.recoilAngle); // Rotate for shot recoil kick
         ctx.translate(-x, -y);
         // 1. Draw Chassis (Tank Body - Sitting flush at y-32 to y)
         const chassisImg = this.type === 'player' ? Player.blueChassisCanvas : Player.orangeChassisCanvas;
