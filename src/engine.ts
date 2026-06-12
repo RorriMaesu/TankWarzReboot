@@ -396,8 +396,7 @@ export class GameEngine {
       }
 
       if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-        // Enforce horizontal bounds depending on player side
-        const minBound = player.type === 'player' ? 25 : this.config.canvasWidth / 2 + 50;
+        const minBound = 25;
         const newX = Math.max(minBound, player.position.x - moveAmount);
         if (newX !== player.position.x) {
           player.position.x = newX;
@@ -407,7 +406,7 @@ export class GameEngine {
           this.sendMoveEventThrottled(player.position.x);
         }
       } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-        const maxBound = player.type === 'player' ? this.config.canvasWidth / 2 - 50 : this.config.canvasWidth - 25;
+        const maxBound = this.config.canvasWidth - 25;
         const newX = Math.min(maxBound, player.position.x + moveAmount);
         if (newX !== player.position.x) {
           player.position.x = newX;
@@ -1226,7 +1225,7 @@ export class GameEngine {
                 // Reactive AI evasion: drive away if player's shell landed close to AI position
                 if (this.lastLandingX !== null && Math.abs(this.lastLandingX - p2.position.x) < 70) {
                   const evadeDist = (Math.random() > 0.5 ? 50 : -50);
-                  const newX = Math.max(this.config.canvasWidth / 2 + 50, Math.min(this.config.canvasWidth - 25, p2.position.x + evadeDist));
+                  const newX = Math.max(25, Math.min(this.config.canvasWidth - 25, p2.position.x + evadeDist));
                   if (newX !== p2.position.x && p2.fuel > 15) {
                     this.aiMoveTargetX = newX;
                     p2.fuel = Math.max(0, p2.fuel - Math.abs(newX - p2.position.x) * 0.25);
@@ -1905,7 +1904,7 @@ export class GameEngine {
         }
 
         if (direction === 'left') {
-          const minBound = player.type === 'player' ? 25 : this.config.canvasWidth / 2 + 50;
+          const minBound = 25;
           const newX = Math.max(minBound, player.position.x - moveAmount);
           if (newX !== player.position.x) {
             player.position.x = newX;
@@ -1915,7 +1914,7 @@ export class GameEngine {
             this.sendMoveEventThrottled(player.position.x);
           }
         } else {
-          const maxBound = player.type === 'player' ? this.config.canvasWidth / 2 - 50 : this.config.canvasWidth - 25;
+          const maxBound = this.config.canvasWidth - 25;
           const newX = Math.min(maxBound, player.position.x + moveAmount);
           if (newX !== player.position.x) {
             player.position.x = newX;
